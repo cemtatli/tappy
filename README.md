@@ -1,0 +1,52 @@
+# Tappy
+
+A Chrome (MV3) extension for browsing, organizing, and exporting your X (Twitter) bookmarks as cards or as a zoomable canvas. Image-first, fully local, light Apple-style UI.
+
+> Your bookmarks are read and stored entirely on your device, using your own browser session. No third-party server is involved.
+
+## Highlights
+
+- **Grid view** — virtualized tweet-card list; scales to thousands of records.
+- **Canvas view** — zoomable, pannable masonry wall of your bookmarked images (Eagle / thiings.co feel).
+- **View switch** — `Grid ⇄ Canvas` from the sidebar, or **G** / **C** on the keyboard.
+- **Lightbox** — full-screen image growing out of the clicked tile, right-hand action bar, bottom strip for multi-image tweets, arrow-key navigation.
+- **Collections** — named collections (create / rename / delete), per-collection color, single and bulk add, plus a non-deletable `Favorites`.
+- **Search & sort** — search by text / author / handle; sort by newest, oldest, or most liked.
+- **Export** — all or selected records as **JSON** / **CSV**; selected images as a single **ZIP** to drag into Figma; copy or download an individual image.
+- **Unmark** — remove a bookmark, one at a time or in bulk.
+
+## How it works
+
+The extension reads **your own** bookmarks from X's GraphQL API using the session cookies (`ct0` / `auth_token`) already in your browser. Data is kept in **IndexedDB** with incremental sync (fetch the newest, page backwards through the older ones). Cookie values never leave the background service worker, and no secrets are bundled with the code.
+
+The X-specific values — bearer token, Bookmarks query ID, Delete Bookmark query ID — are **not hardcoded**. The extension picks them up from your own x.com traffic, or you can paste them in from DevTools. Either way they live in `chrome.storage.local`. X rotates these regularly; when a request starts failing, the extension rediscovers them and retries.
+
+## Tech
+
+Chrome MV3 · React 19 · Tailwind 4 (`@theme` tokens) · `@base-ui/react` · `@tanstack/react-virtual` · lucide-react · Vite · Vitest + jsdom + fake-indexeddb.
+
+The UI is currently in Turkish.
+
+## Development
+
+```bash
+npm install
+npm run build      # vite build + copy static files → dist/
+npm test           # Vitest suite
+npm run lint       # ESLint
+npm run format     # Prettier
+```
+
+### Loading the extension
+
+1. Run `npm run build` to produce `dist/`.
+2. Open `chrome://extensions` and enable **Developer mode**.
+3. Choose **Load unpacked** and select the `dist/` folder.
+
+## Security
+
+Hardening for public release: MV3 `content_security_policy` allowlist, sandboxed tweet-embed iframe, no bundled secrets, no `dangerouslySetInnerHTML` or `eval`, `rel="noreferrer"` on external links.
+
+## License
+
+[MIT](LICENSE)

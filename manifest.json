@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Tappy",
+  "version": "0.1.0",
+  "description": "X bookmarklarını kart halinde göster, hızlıca export et veya unmark et.",
+  "icons": {
+    "16": "src/assets/icons/icon-16.png",
+    "32": "src/assets/icons/icon-32.png",
+    "48": "src/assets/icons/icon-48.png",
+    "128": "src/assets/icons/icon-128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "src/assets/icons/icon-16.png",
+      "32": "src/assets/icons/icon-32.png",
+      "48": "src/assets/icons/icon-48.png",
+      "128": "src/assets/icons/icon-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "src/background/background.js",
+    "type": "module"
+  },
+  "permissions": ["cookies", "storage", "webRequest"],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://api.x.com/*",
+    "https://twitter.com/*",
+    "https://pbs.twimg.com/*",
+    "https://abs.twimg.com/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://x.com https://api.x.com https://abs.twimg.com https://twitter.com https://pbs.twimg.com https://platform.twitter.com; img-src 'self' blob: data: https://pbs.twimg.com https://platform.twitter.com; frame-src https://platform.twitter.com"
+  }
+}

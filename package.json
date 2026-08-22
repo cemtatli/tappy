@@ -1,0 +1,40 @@
+{
+  "name": "x-bookmarker",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "vite build && node scripts/copy-static.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.6.0",
+    "@tailwindcss/vite": "^4.3.2",
+    "@tanstack/react-virtual": "^3.14.5",
+    "lucide-react": "^1.23.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.3.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "eslint": "^10.7.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "fake-indexeddb": "^6.0.0",
+    "globals": "^17.7.0",
+    "jsdom": "^25.0.0",
+    "prettier": "^3.9.6",
+    "sharp": "^0.35.3",
+    "vite": "^6.0.0",
+    "vitest": "^2.1.0"
+  }
+}

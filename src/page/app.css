@@ -1,0 +1,132 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-base: #ffffff;
+  --color-surface: #f5f5f7;
+  --color-surface-2: #fbfbfd;
+  --color-line: #e5e5ea;
+  --color-accent: #0071e3;
+  --color-text: #1d1d1f;
+  --color-muted: #6e6e73;
+  --color-danger: #ff3b30;
+  --color-success: #34c759;
+  --radius: 0.75rem;
+  --font-sans:
+    -apple-system, 'SF Pro Text', 'SF Pro Display', Inter, ui-sans-serif,
+    system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+}
+
+body {
+  background-color: var(--color-base);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@keyframes banner-in {
+  from {
+    transform: translateX(-50%) translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Toast materialises from the right: slide + scale + blur, no overshoot. */
+@keyframes toast-in {
+  from {
+    transform: translateX(12px) scale(0.96);
+    opacity: 0;
+    filter: blur(2px);
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes settings-in {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes lightbox-in {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes card-exit-left {
+  to {
+    transform: translateX(-120%) rotate(-6deg);
+    opacity: 0;
+  }
+}
+
+@keyframes card-exit-right {
+  to {
+    transform: translateX(120%) rotate(6deg);
+    opacity: 0;
+  }
+}
+
+.card-exit-left {
+  animation: card-exit-left 250ms ease-in forwards;
+}
+
+.card-exit-right {
+  animation: card-exit-right 250ms ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+  .card-exit-left,
+  .card-exit-right {
+    animation-duration: 1ms;
+  }
+}
+
+/* Reduced transparency: make the toast material solid for readability. */
+@media (prefers-reduced-transparency: reduce) {
+  .toast-surface {
+    background: var(--color-base);
+    backdrop-filter: none;
+  }
+}
