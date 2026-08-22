@@ -4,6 +4,8 @@ A Chrome (MV3) extension for browsing, organizing, and exporting your X (Twitter
 
 > Your bookmarks are read and stored entirely on your device, using your own browser session. No third-party server is involved.
 
+![Canvas view — a zoomable masonry wall of bookmarked images, with the sidebar showing sources and collections](docs/screenshots/canvas.webp)
+
 ## Highlights
 
 - **Grid view** — virtualized tweet-card list; scales to thousands of records.
@@ -20,6 +22,10 @@ A Chrome (MV3) extension for browsing, organizing, and exporting your X (Twitter
 The extension reads **your own** bookmarks from X's GraphQL API using the session cookies (`ct0` / `auth_token`) already in your browser. Data is kept in **IndexedDB** with incremental sync (fetch the newest, page backwards through the older ones). Cookie values never leave the background service worker, and no secrets are bundled with the code.
 
 The X-specific values — bearer token, Bookmarks query ID, Delete Bookmark query ID — are **not hardcoded**. The extension picks them up from your own x.com traffic, or you can paste them in from DevTools. Either way they live in `chrome.storage.local`. X rotates these regularly; when a request starts failing, the extension rediscovers them and retries.
+
+Settings reflects that: a healthy connection shows nothing to configure, and the fields only surface when something needs your attention.
+
+![Settings dialog showing a connected X account, with the advanced fields collapsed](docs/screenshots/settings.webp)
 
 ## Tech
 
