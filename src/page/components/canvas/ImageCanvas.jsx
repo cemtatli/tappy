@@ -303,8 +303,8 @@ export function ImageCanvas({
     if (wasDrag) {
       try {
         e.currentTarget.releasePointerCapture(e.pointerId);
-      } catch (_) {
-        // ignore
+      } catch {
+        // Capture may already have been released.
       }
       const vel = velRef.current;
       const speed = Math.hypot(vel.x, vel.y);
@@ -341,7 +341,6 @@ export function ImageCanvas({
     }
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onZoomChange]);
 
   useEffect(() => {
