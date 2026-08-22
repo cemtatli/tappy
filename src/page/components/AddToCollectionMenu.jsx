@@ -11,7 +11,7 @@ export function AddToCollectionMenu({
   return (
     <>
       <div className="fixed inset-0 z-[60]" onClick={onClose} />
-      <div className="fixed bottom-24 left-1/2 z-[60] w-56 -translate-x-1/2 rounded-xl border border-line bg-white p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] motion-safe:animate-[fade-in_var(--dur-base)_var(--ease-out)]">
+      <div className="fixed bottom-24 left-1/2 z-[60] w-56 -translate-x-1/2 rounded-xl border border-line bg-white p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] origin-bottom animate-[menu-in_var(--dur-base)_var(--ease-out)]">
         <p className="px-2 py-1 text-xs uppercase text-muted">
           Koleksiyona ekle
         </p>

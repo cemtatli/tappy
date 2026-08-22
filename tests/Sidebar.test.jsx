@@ -76,12 +76,51 @@ describe('Sidebar', () => {
     expect(onViewModeChange).toHaveBeenCalledWith('canvas');
   });
 
-  it('sort select calls onSortChange', () => {
+  it('sort menu shows the active option and calls onSortChange', async () => {
     const onSortChange = vi.fn();
     render(<Sidebar {...base} onSortChange={onSortChange} />);
-    fireEvent.change(screen.getByLabelText('Sıralama'), {
-      target: { value: 'date-asc' },
-    });
+    const trigger = screen.getByRole('button', { name: /sıralama/i });
+    expect(trigger.textContent).toContain('Yeni → Eski');
+    fireEvent.click(trigger);
+    fireEvent.click(await screen.findByText('Eski → Yeni'));
     expect(onSortChange).toHaveBeenCalledWith('date-asc');
+  });
+
+  it('does not use a native select for sorting', () => {
+    const { container } = render(<Sidebar {...base} />);
+    expect(container.querySelector('select')).toBeNull();
+  });
+
+  it('marks the active view on the segmented control', () => {
+    render(<Sidebar {...base} viewMode="canvas" />);
+    expect(
+      screen
+        .getByRole('button', { name: /canvas/i })
+        .getAttribute('aria-pressed')
+    ).toBe('true');
+    expect(
+      screen.getByRole('button', { name: /grid/i }).getAttribute('aria-pressed')
+    ).toBe('false');
+  });
+
+  it('deletes a collection from its context menu', async () => {
+    const onDeleteCollection = vi.fn();
+    render(<Sidebar {...base} onDeleteCollection={onDeleteCollection} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: /koleksiyon seçenekleri/i })
+    );
+    fireEvent.click(await screen.findByText('Sil'));
+    expect(onDeleteCollection).toHaveBeenCalledWith('c1');
+  });
+
+  it('renames a collection from its context menu', async () => {
+    const onRenameCollection = vi.fn();
+    vi.spyOn(window, 'prompt').mockReturnValue('Yeni ad');
+    render(<Sidebar {...base} onRenameCollection={onRenameCollection} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: /koleksiyon seçenekleri/i })
+    );
+    fireEvent.click(await screen.findByText('Yeniden adlandır'));
+    expect(onRenameCollection).toHaveBeenCalledWith('c1', 'Yeni ad');
   });
 });

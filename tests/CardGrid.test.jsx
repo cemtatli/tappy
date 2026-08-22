@@ -116,4 +116,36 @@ describe('CardGrid', () => {
     expect(screen.queryByRole('button', { name: 'En üste git' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'En alta git' })).toBeNull();
   });
+
+  it('marks a row as exiting so its unmark animation can play', () => {
+    render(
+      <CardGrid
+        tweets={TWEETS}
+        selectionMode={false}
+        selectedIds={new Set()}
+        exitingIds={new Set(['1'])}
+        onToggleSelect={() => {}}
+      />
+    );
+    const row = document
+      .querySelector('[data-tweet-id="1"]')
+      .closest('[data-index]');
+    expect(row.className).toContain('card-exit');
+  });
+
+  it('leaves rows that are not being unmarked alone', () => {
+    render(
+      <CardGrid
+        tweets={TWEETS}
+        selectionMode={false}
+        selectedIds={new Set()}
+        exitingIds={new Set(['1'])}
+        onToggleSelect={() => {}}
+      />
+    );
+    const row = document
+      .querySelector('[data-tweet-id="2"]')
+      .closest('[data-index]');
+    expect(row.className).not.toContain('card-exit');
+  });
 });

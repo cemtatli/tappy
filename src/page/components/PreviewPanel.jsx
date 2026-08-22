@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { cn } from '../lib/cn.js';
 
+// Keep in sync with the w-[420px] classes below: Tailwind cannot read a JS
+// constant, so the value has to be written twice.
+export const PREVIEW_PANEL_WIDTH = 420;
+
 const EMBED_ORIGIN = 'https://platform.twitter.com';
 const INITIAL_EMBED_HEIGHT = 300;
 
@@ -41,7 +45,7 @@ export function PreviewPanel({ tweet, onClose, overlay = false }) {
       aria-label="Tweet önizleme"
       className={cn(
         overlay
-          ? 'fixed right-0 top-0 z-[60] h-screen w-[420px] overflow-hidden border-l border-line bg-base shadow-[0_8px_30px_rgba(0,0,0,0.12)] motion-safe:animate-[fade-in_var(--dur-base)_var(--ease-out)]'
+          ? 'fixed right-0 top-0 z-[60] h-screen w-[420px] overflow-hidden border-l border-line bg-base shadow-[0_8px_30px_rgba(0,0,0,0.12)] animate-[panel-in_var(--dur-slow)_var(--ease-out)]'
           : cn(
               'sticky top-0 h-screen shrink-0 overflow-hidden transition-[width] duration-300',
               tweet ? 'w-[420px] border-r border-line' : 'w-0'

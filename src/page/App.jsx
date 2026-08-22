@@ -38,7 +38,10 @@ import { CardGrid } from './components/CardGrid.jsx';
 import { SelectionBar } from './components/SelectionBar.jsx';
 import { ToastStack } from './components/ToastStack.jsx';
 import { addToast, removeToast } from './lib/toasts.js';
-import { PreviewPanel } from './components/PreviewPanel.jsx';
+import {
+  PreviewPanel,
+  PREVIEW_PANEL_WIDTH,
+} from './components/PreviewPanel.jsx';
 import { Sidebar } from './components/Sidebar.jsx';
 import { SettingsPanel } from './components/SettingsPanel.jsx';
 import { ImageCanvas } from './components/canvas/ImageCanvas.jsx';
@@ -66,6 +69,9 @@ function downloadBlob(filename, blob) {
   URL.revokeObjectURL(url);
 }
 
+// Must match the card-exit keyframe duration (--dur-base) in app.css.
+const CARD_EXIT_MS = 200;
+
 export function App() {
   const dbRef = useRef(null);
   const isLoadingOlderRef = useRef(false);
@@ -77,6 +83,7 @@ export function App() {
   const [selectedIds, setSelectedIds] = useState(createSelectionState());
   const [toasts, setToasts] = useState([]);
   const [bulkProgress, setBulkProgress] = useState(null);
+  const [exitingIds, setExitingIds] = useState(() => new Set());
   const [prefs] = useState(loadPrefs);
   const [sortMode, setSortMode] = useState(prefs.sortMode);
   const [previewId, setPreviewId] = useState(null);
@@ -356,9 +363,26 @@ export function App() {
     downloadFile(`bookmark-${id}.json`, toJson([tweet]), 'application/json');
   }
 
+  // Hold the rows in place while their exit plays, then drop them so the list
+  // closes up once — instead of the card vanishing mid-frame.
+  function playExit(ids) {
+    setExitingIds((current) => new Set([...current, ...ids]));
+    return new Promise((resolve) =>
+      setTimeout(() => {
+        setExitingIds((current) => {
+          const next = new Set(current);
+          for (const id of ids) next.delete(id);
+          return next;
+        });
+        resolve();
+      }, CARD_EXIT_MS)
+    );
+  }
+
   async function handleUnmarkOne(id) {
     const removed = allTweets.find((t) => t.id === id);
     if (!removed) return;
+    await playExit([id]);
     setAllTweets((current) => current.filter((t) => t.id !== id));
     await deleteTweetById(dbRef.current, id);
     const result = await requestDeleteBookmark(id);
@@ -407,6 +431,7 @@ export function App() {
     const removedById = new Map(
       allTweets.filter((t) => selectedIds.has(t.id)).map((t) => [t.id, t])
     );
+    await playExit(ids);
     setAllTweets((current) => current.filter((t) => !selectedIds.has(t.id)));
     setSelectedIds(clearSelection());
     for (const id of ids) {
@@ -570,10 +595,7 @@ export function App() {
         onExportAll={handleExportAll}
       />
       <div className="flex flex-1 justify-center">
-        <div
-          key={viewMode}
-          className="flex min-h-0 flex-1 motion-safe:animate-[fade-in_var(--dur-base)_var(--ease-out)]"
-        >
+        <div className="flex min-h-0 flex-1">
           {viewMode === 'canvas' ? (
             <>
               <ImageCanvas
@@ -598,6 +620,7 @@ export function App() {
                 tweets={filteredTweets}
                 selectionMode={selectionMode}
                 selectedIds={selectedIds}
+                exitingIds={exitingIds}
                 onToggleSelect={handleToggleSelect}
                 onExportOne={handleExportOne}
                 onUnmarkOne={handleUnmarkOne}
@@ -667,6 +690,9 @@ export function App() {
           setLightbox(null);
         }}
         onClose={() => setLightbox(null)}
+        reservedRight={
+          viewMode === 'canvas' && previewTweet ? PREVIEW_PANEL_WIDTH : 0
+        }
       />
     </div>
   );

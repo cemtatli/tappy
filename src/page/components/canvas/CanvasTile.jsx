@@ -15,7 +15,7 @@ export const CanvasTile = memo(function CanvasTile({
 
   return (
     <div
-      className="group absolute overflow-hidden rounded-lg border border-line bg-surface transition-[transform,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+      className="tile-lift group absolute overflow-hidden rounded-lg border border-line bg-surface"
       style={{ left: tile.x, top: tile.y, width: tile.w, height: tile.h }}
     >
       {!loaded && (

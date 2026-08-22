@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { ImageLightbox } from '../src/page/components/canvas/ImageLightbox.jsx';
 
 const image1 = {
@@ -20,8 +20,11 @@ const image2 = {
   mediaIndex: 1,
 };
 
+afterEach(() => vi.useRealTimers());
+
 describe('ImageLightbox', () => {
   it('renders the active image and closes via Kapat button', () => {
+    vi.useFakeTimers();
     const onClose = vi.fn();
     render(
       <ImageLightbox
@@ -34,7 +37,48 @@ describe('ImageLightbox', () => {
     );
     expect(document.querySelector('img')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /kapat/i }));
+    act(() => vi.advanceTimersByTime(400));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('plays its exit before telling the parent to close', () => {
+    vi.useFakeTimers();
+    const onClose = vi.fn();
+    render(
+      <ImageLightbox
+        images={[image1]}
+        initialKey="1:0"
+        originRect={null}
+        favoriteKeys={new Set()}
+        onClose={onClose}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /kapat/i }));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog').getAttribute('data-closing')).toBe(
+      'true'
+    );
+    act(() => vi.advanceTimersByTime(400));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fire a second close when Kapat is pressed twice', () => {
+    vi.useFakeTimers();
+    const onClose = vi.fn();
+    render(
+      <ImageLightbox
+        images={[image1]}
+        initialKey="1:0"
+        originRect={null}
+        favoriteKeys={new Set()}
+        onClose={onClose}
+      />
+    );
+    const close = screen.getByRole('button', { name: /kapat/i });
+    fireEvent.click(close);
+    fireEvent.click(close);
+    act(() => vi.advanceTimersByTime(400));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('renders nothing when images is empty', () => {
@@ -74,5 +118,59 @@ describe('ImageLightbox', () => {
     // Click second thumbnail — main image should switch to image2.
     fireEvent.click(thumb2);
     expect(mainImg.src).toContain('b.jpg');
+  });
+
+  it('reopens fully visible after a previous close', () => {
+    vi.useFakeTimers();
+    const props = {
+      initialKey: '1:0',
+      originRect: null,
+      favoriteKeys: new Set(),
+      onClose: () => {},
+    };
+    const { rerender } = render(<ImageLightbox {...props} images={[image1]} />);
+    fireEvent.click(screen.getByRole('button', { name: /kapat/i }));
+    act(() => vi.advanceTimersByTime(400));
+
+    // The parent clears the selection, then the user opens another image.
+    rerender(<ImageLightbox {...props} images={[]} initialKey={null} />);
+    rerender(<ImageLightbox {...props} images={[image1]} />);
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.getAttribute('data-closing')).toBeNull();
+    expect(dialog.className).toContain('opacity-100');
+    expect(dialog.querySelector('[class*="lightbox-out"]')).toBeNull();
+  });
+
+  it('reserves no space when the preview panel is closed', () => {
+    render(
+      <ImageLightbox
+        images={[image1]}
+        initialKey="1:0"
+        originRect={null}
+        favoriteKeys={new Set()}
+        onClose={() => {}}
+      />
+    );
+    const stage = screen.getByTestId('lightbox-stage');
+    expect(stage.style.paddingRight).toBe('0px');
+  });
+
+  it('shrinks and shifts left to clear the preview panel', () => {
+    render(
+      <ImageLightbox
+        images={[image1]}
+        initialKey="1:0"
+        originRect={null}
+        favoriteKeys={new Set()}
+        reservedRight={420}
+        onClose={() => {}}
+      />
+    );
+    const stage = screen.getByTestId('lightbox-stage');
+    expect(stage.style.paddingRight).toBe('420px');
+
+    const mainImg = document.querySelector('[role="dialog"] img:not(.h-full)');
+    expect(mainImg.style.maxWidth).toContain('420px');
   });
 });

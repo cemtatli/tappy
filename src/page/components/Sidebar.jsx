@@ -12,11 +12,14 @@ import {
   LayoutDashboard,
   Pencil,
   Trash2,
+  ChevronsUpDown,
+  Check,
 } from 'lucide-react';
 import { FAVORITES_ID } from '../../shared/db.js';
 import tappyMark from '../../assets/icons/tappy-mark.svg';
 import { cn } from '../lib/cn.js';
 import { Input } from './ui/Input.jsx';
+import { Segmented } from './ui/Segmented.jsx';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -44,25 +47,37 @@ function Row({ active, icon: Icon, dotColor, label, count, onClick, menu }) {
   return (
     <div
       className={cn(
-        'group flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm',
-        active ? 'bg-surface text-text' : 'text-muted hover:bg-black/5'
+        'group flex h-8 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-[13px] tracking-[0.01em] transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)]',
+        active
+          ? 'bg-accent/10 font-medium text-accent'
+          : 'text-muted hover:bg-black/5 hover:text-text'
       )}
       onClick={onClick}
     >
       {dotColor != null ? (
         <span
-          className="h-3 w-3 shrink-0 rounded-full"
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
           style={{ backgroundColor: dotColor }}
         />
       ) : (
-        <Icon size={16} />
+        <Icon size={15} className="shrink-0" />
       )}
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {menu}
-      <span className="text-xs tabular-nums text-muted">{count}</span>
+      <span
+        className={cn(
+          'text-[11px] tabular-nums',
+          active ? 'text-accent/70' : 'text-muted'
+        )}
+      >
+        {count}
+      </span>
     </div>
   );
 }
+
+const FOOTER_ACTION =
+  'flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-[13px] tracking-[0.01em] text-muted transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-black/5 hover:text-text';
 
 export function Sidebar({
   source,
@@ -98,57 +113,63 @@ export function Sidebar({
   }
 
   const collSource = typeof source === 'object' ? source.collectionId : null;
+  const activeSort =
+    SORT_OPTIONS.find((o) => o.value === sortMode) ?? SORT_OPTIONS[0];
 
   return (
-    <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-line bg-surface-2 p-3">
+    <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-line bg-surface p-3">
       <div className="mb-3 flex items-center gap-2 px-1">
         <img src={tappyMark} alt="" className="h-7 w-7" />
-        <span className="text-[15px] font-semibold tracking-tight text-text">
+        <span className="text-[15px] font-semibold tracking-[-0.01em] text-text">
           Tappy
         </span>
       </div>
       <Input
+        variant="subtle"
         aria-label="Ara"
-        placeholder="Ara..."
+        placeholder="Ara"
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
         className="mb-3 w-full"
       />
 
       {/* View controls */}
-      <div className="mb-3 flex flex-col gap-2">
-        <div className="flex items-center gap-1 rounded-full bg-surface p-1">
-          {VIEW_MODES.map(({ value, label, Icon }) => {
-            const active = viewMode === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={String(active)}
-                onClick={() => onViewModeChange(value)}
-                className={cn(
-                  'flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1 text-sm transition-[transform,background-color] duration-[var(--dur-base)] ease-[var(--ease-out)]',
-                  active ? 'bg-accent text-white' : 'text-muted hover:text-text'
-                )}
+      <div className="mb-3 flex flex-col gap-1.5">
+        <Segmented
+          label="Görünüm"
+          value={viewMode}
+          options={VIEW_MODES}
+          onChange={onViewModeChange}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label="Sıralama"
+            className={cn(
+              FOOTER_ACTION,
+              'justify-between bg-black/[0.04] text-text hover:bg-black/[0.07]'
+            )}
+          >
+            <span className="truncate">{activeSort.label}</span>
+            <ChevronsUpDown size={13} className="shrink-0 text-muted" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {SORT_OPTIONS.map((o) => (
+              <DropdownMenuItem
+                key={o.value}
+                onClick={() => onSortChange(o.value)}
               >
-                <Icon size={14} />
-                {label}
-              </button>
-            );
-          })}
-        </div>
-        <select
-          aria-label="Sıralama"
-          value={sortMode}
-          onChange={(e) => onSortChange(e.target.value)}
-          className="w-full rounded-[var(--radius)] border border-line bg-white px-2 py-1.5 text-sm text-text"
-        >
-          {SORT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+                <Check
+                  size={14}
+                  className={cn(
+                    'shrink-0 text-accent',
+                    o.value === sortMode ? 'opacity-100' : 'opacity-0'
+                  )}
+                />
+                {o.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Row
@@ -176,7 +197,7 @@ export function Sidebar({
       />
 
       <div className="mt-4 mb-1 flex items-center justify-between px-2.5">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
           Koleksiyonlar
         </span>
         <button
@@ -205,6 +226,7 @@ export function Sidebar({
               if (e.key === 'Escape') setCreating(false);
             }}
             onBlur={submitNew}
+            variant="subtle"
             className="mb-1 w-full"
           />
           <div className="flex flex-wrap gap-1.5 px-1 pb-1">
@@ -254,7 +276,7 @@ export function Sidebar({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem
-                    onSelect={() => {
+                    onClick={() => {
                       const name = prompt('Yeni ad', c.name);
                       if (name && name.trim())
                         onRenameCollection(c.id, name.trim());
@@ -292,7 +314,7 @@ export function Sidebar({
                   </div>
                   <DropdownMenuItem
                     className="text-danger"
-                    onSelect={() => onDeleteCollection(c.id)}
+                    onClick={() => onDeleteCollection(c.id)}
                   >
                     <Trash2 size={14} />
                     Sil
@@ -304,41 +326,26 @@ export function Sidebar({
         ))}
       </div>
 
-      {/* Shortcut hint */}
-      <div className="mt-2 flex items-center justify-between px-2.5 text-xs text-muted">
-        <span>Görünüm</span>
-        <span className="flex gap-1">
-          <kbd className="rounded border border-line bg-surface px-1.5 py-0.5 font-sans text-[11px]">
-            G
-          </kbd>
-          <kbd className="rounded border border-line bg-surface px-1.5 py-0.5 font-sans text-[11px]">
-            C
-          </kbd>
-        </span>
-      </div>
-
-      {/* Sidebar footer */}
-      <div className="mt-2 border-t border-line pt-2">
+      <div className="mt-3 border-t border-line pt-2">
         <button
           type="button"
           onClick={onToggleSelectionMode}
-          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-muted transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-black/5 hover:text-text"
+          className={FOOTER_ACTION}
         >
-          <CheckSquare size={16} /> {selectionMode ? 'Seçimi bitir' : 'Seç'}
+          <CheckSquare size={15} className="shrink-0" />
+          {selectionMode ? 'Seçimi bitir' : 'Seç'}
         </button>
-        <button
-          type="button"
-          onClick={onExportAll}
-          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-muted transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-black/5 hover:text-text"
-        >
-          <Download size={16} /> Tümünü export et
+        <button type="button" onClick={onExportAll} className={FOOTER_ACTION}>
+          <Download size={15} className="shrink-0" />
+          Tümünü export et
         </button>
         <button
           type="button"
           onClick={onOpenSettings}
-          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-muted transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-black/5 hover:text-text"
+          className={FOOTER_ACTION}
         >
-          <Settings size={16} /> Ayarlar
+          <Settings size={15} className="shrink-0" />
+          Ayarlar
         </button>
       </div>
     </aside>

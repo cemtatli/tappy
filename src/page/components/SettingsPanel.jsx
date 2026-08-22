@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { X, Info } from 'lucide-react';
+import { X, Info, ChevronRight } from 'lucide-react';
 import { Button } from './ui/Button.jsx';
 import { Input } from './ui/Input.jsx';
 import { Checkbox } from './ui/Checkbox.jsx';
+import { XLogo } from './icons/XLogo.jsx';
 import { loadXSettings, saveXSettings } from '../../shared/xSettings.js';
 import {
   requestXStatus,
@@ -10,6 +11,7 @@ import {
 } from '../../shared/messages.js';
 import { BOOKMARKS_FEATURES } from '../../background/xConfig.js';
 import { featureLabel } from '../lib/featureLabels.js';
+import { connectionState, filledCount } from '../lib/xConnection.js';
 
 function InfoHint({ label, children }) {
   const [open, setOpen] = useState(false);
@@ -41,23 +43,116 @@ function InfoHint({ label, children }) {
   );
 }
 
+function Disclosure({ id, title, open, onToggle, children }) {
+  return (
+    <section className="border-t border-line">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={onToggle}
+        className="flex w-full items-center gap-1.5 py-3 text-sm font-semibold text-text"
+      >
+        <ChevronRight
+          size={14}
+          className={`text-muted transition-transform duration-[var(--dur-fast)] ${open ? 'rotate-90' : ''}`}
+        />
+        {title}
+      </button>
+      {open && (
+        <div id={id} className="pb-4">
+          {children}
+        </div>
+      )}
+    </section>
+  );
+}
+
+const CARD_COPY = {
+  connected: {
+    title: 'Bağlı',
+    detail: 'Giriş yapılı · değerler otomatik alındı',
+  },
+  incomplete: {
+    title: 'Kurulum tamamlanmadı',
+  },
+  'logged-out': {
+    title: 'x.com oturumu yok',
+    detail: 'Yer imlerini okumak için x.com hesabına giriş yapman gerekiyor.',
+  },
+};
+
+function ConnectionCard({ state, filled, busy, note, onRefresh }) {
+  if (state === 'loading') {
+    return (
+      <div className="mb-5 flex items-center gap-3 rounded-[var(--radius)] border border-line bg-surface-2 p-4">
+        <div className="h-5 w-5 rounded bg-line" />
+        <div className="h-3 w-32 rounded bg-line" />
+      </div>
+    );
+  }
+
+  const copy = CARD_COPY[state];
+  const detail =
+    state === 'incomplete' ? `${filled}/3 değer alındı` : copy.detail;
+
+  return (
+    <div className="mb-5 rounded-[var(--radius)] border border-line bg-surface-2 p-4">
+      <div className="flex items-start gap-3">
+        <XLogo size={20} className="mt-0.5 shrink-0 text-text" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-text">{copy.title}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted">{detail}</p>
+        </div>
+        {state === 'logged-out' ? (
+          <Button
+            size="sm"
+            onClick={() => window.open('https://x.com/login', '_blank')}
+          >
+            x.com&apos;a giriş yap
+          </Button>
+        ) : (
+          <Button
+            variant={state === 'connected' ? 'outline' : 'default'}
+            size="sm"
+            onClick={onRefresh}
+            disabled={busy}
+          >
+            {busy
+              ? 'Taranıyor...'
+              : state === 'connected'
+                ? 'Yenile'
+                : 'Otomatik doldur'}
+          </Button>
+        )}
+      </div>
+      {note && (
+        <p className="mt-3 text-xs leading-relaxed text-muted">{note}</p>
+      )}
+    </div>
+  );
+}
+
 export function SettingsPanel({ open, onClose }) {
   const [bearerToken, setBearerToken] = useState('');
   const [bookmarksQueryId, setBookmarksQueryId] = useState('');
   const [deleteBookmarkQueryId, setDeleteBookmarkQueryId] = useState('');
   const [features, setFeatures] = useState({ ...BOOKMARKS_FEATURES });
   const [saveStatus, setSaveStatus] = useState('');
-  const [xStatus, setXStatus] = useState(null);
-  const [figmaNote, setFigmaNote] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(null);
   const [discovering, setDiscovering] = useState(false);
   const [discoverNote, setDiscoverNote] = useState('');
+  // null until the user picks a side, so the connection state decides the default.
+  const [advancedOpen, setAdvancedOpen] = useState(null);
+  const [featuresOpen, setFeaturesOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
 
     setSaveStatus('');
-    setFigmaNote('');
     setDiscoverNote('');
+    setAdvancedOpen(null);
+    setFeaturesOpen(false);
 
     loadXSettings().then((s) => {
       setBearerToken(s.bearerToken ?? '');
@@ -67,27 +162,25 @@ export function SettingsPanel({ open, onClose }) {
     });
 
     requestXStatus().then((res) => {
-      if (res.ok) {
-        setXStatus(res.data.isLoggedIn ? 'logged-in' : 'logged-out');
-      } else {
-        setXStatus('logged-out');
-      }
+      setIsLoggedIn(res.ok ? res.data.isLoggedIn : false);
     });
   }, [open]);
 
   if (!open) return null;
 
+  const config = { bearerToken, bookmarksQueryId, deleteBookmarkQueryId };
+  const state = connectionState({ isLoggedIn, ...config });
+  const advancedVisible = advancedOpen ?? state !== 'connected';
+
   async function handleSave() {
     setSaveStatus('');
 
-    const patch = {
+    await saveXSettings({
       bearerToken: bearerToken.trim(),
       bookmarksQueryId: bookmarksQueryId.trim(),
       deleteBookmarkQueryId: deleteBookmarkQueryId.trim(),
       bookmarksFeatures: features,
-    };
-
-    await saveXSettings(patch);
+    });
     setSaveStatus('Kaydedildi');
   }
 
@@ -106,16 +199,12 @@ export function SettingsPanel({ open, onClose }) {
         setBearerToken(s.bearerToken ?? '');
         setBookmarksQueryId(s.bookmarksQueryId ?? '');
         setDeleteBookmarkQueryId(s.deleteBookmarkQueryId ?? '');
-        filled = [
-          s.bearerToken,
-          s.bookmarksQueryId,
-          s.deleteBookmarkQueryId,
-        ].filter(Boolean).length;
+        filled = filledCount(s);
         if (filled === 3) break;
       }
       setDiscoverNote(
         filled === 3
-          ? '3 alan otomatik dolduruldu. Kaydet.'
+          ? '3 alan da alındı, kaydedildi.'
           : `${filled}/3 yakalandı. Açılan x.com sekmesinde bookmarks tam yüklensin, sonra tekrar bas.`
       );
     } catch (err) {
@@ -131,11 +220,10 @@ export function SettingsPanel({ open, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm motion-safe:animate-[fade-in_var(--dur-base)_var(--ease-out)]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-[fade-in_var(--dur-base)_var(--ease-out)]"
       onClick={handleBackdropClick}
     >
-      <div className="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius)] border border-line bg-white p-6 text-text shadow-[0_8px_30px_rgba(0,0,0,0.12)] motion-safe:animate-[settings-in_var(--dur-base)_var(--ease-out)]">
-        {/* Başlık */}
+      <div className="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius)] border border-line bg-white p-6 text-text shadow-[0_8px_30px_rgba(0,0,0,0.12)] animate-[settings-in_var(--dur-base)_var(--ease-out)]">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-text">Ayarlar</h2>
           <button
@@ -148,24 +236,24 @@ export function SettingsPanel({ open, onClose }) {
           </button>
         </div>
 
-        {/* X Durum Satırı */}
-        <p className="mb-5 text-sm text-muted">
-          {xStatus === 'logged-in'
-            ? 'X: giriş yapılı'
-            : xStatus === 'logged-out'
-              ? 'X: giriş yok'
-              : 'X: durum yükleniyor...'}
-        </p>
+        <ConnectionCard
+          state={state}
+          filled={filledCount(config)}
+          busy={discovering}
+          note={discoverNote}
+          onRefresh={handleAutoFill}
+        />
 
-        {/* X API Override Alanları */}
-        <section className="mb-6">
-          <h3 className="mb-1 text-sm font-semibold text-text">
-            X API Ayarları
-          </h3>
-          <p className="mb-4 text-xs text-muted">
-            Bu alanlar isteğe bağlıdır; boş bırakıldığında yerleşik değerler
-            kullanılır. "X arayüzü değişti" hatası aldığınızda DevTools Network
-            sekmesinden güncel değerleri buraya yapıştırabilirsiniz.
+        <Disclosure
+          id="settings-advanced"
+          title="Gelişmiş"
+          open={advancedVisible}
+          onToggle={() => setAdvancedOpen(!advancedVisible)}
+        >
+          <p className="mb-4 text-xs leading-relaxed text-muted">
+            Bu değerleri eklenti kendi yakalar. Yalnızca &quot;X arayüzü
+            değişti&quot; hatası aldığında ve otomatik doldurma işe
+            yaramadığında elle gir.
           </p>
 
           <div className="flex flex-col gap-3">
@@ -276,33 +364,15 @@ export function SettingsPanel({ open, onClose }) {
                 placeholder="Query ID..."
               />
             </div>
-
-            <div className="mt-1 flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAutoFill}
-                disabled={discovering}
-              >
-                {discovering ? 'Taranıyor...' : 'Otomatik doldur / Yenile'}
-              </Button>
-              {discoverNote && (
-                <span className="text-xs text-muted">{discoverNote}</span>
-              )}
-            </div>
-            <p className="text-[11px] leading-relaxed text-muted">
-              x.com&apos;a giriş yapmışken bu buton token ve Query ID&apos;leri
-              otomatik çeker. Ayrıca senkron 401/404 alınca değerler
-              kendiliğinden yenilenir.
-            </p>
           </div>
-        </section>
+        </Disclosure>
 
-        {/* Bookmarks Features */}
-        <section className="mb-6 border-t border-line pt-4">
-          <h3 className="mb-3 text-sm font-semibold text-text">
-            Bookmarks Features
-          </h3>
+        <Disclosure
+          id="settings-features"
+          title="Bookmarks Features"
+          open={featuresOpen}
+          onToggle={() => setFeaturesOpen((v) => !v)}
+        >
           <div className="flex flex-col gap-2">
             {Object.keys(BOOKMARKS_FEATURES).map((key) => (
               <label
@@ -319,30 +389,9 @@ export function SettingsPanel({ open, onClose }) {
               </label>
             ))}
           </div>
-        </section>
+        </Disclosure>
 
-        {/* Figma Stub */}
-        <section className="mb-6 border-t border-line pt-4">
-          <h3 className="mb-3 text-sm font-semibold text-text">Figma</h3>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setFigmaNote(
-                  'Export şu an ZIP ile çalışıyor; doğrudan Figma bağlantısı yakında.'
-                )
-              }
-            >
-              Figma&apos;ya bağlan
-            </Button>
-            <span className="text-xs text-muted">Bağlı değil</span>
-          </div>
-          {figmaNote && <p className="mt-2 text-xs text-muted">{figmaNote}</p>}
-        </section>
-
-        {/* Kaydet */}
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-3 border-t border-line pt-4">
           {saveStatus && (
             <span className="text-sm text-accent">{saveStatus}</span>
           )}

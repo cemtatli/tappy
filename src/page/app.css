@@ -87,39 +87,168 @@ body {
   }
 }
 
-@keyframes card-exit-left {
+/* Exit travels less than the entrance: leaving should not upstage arriving. */
+@keyframes lightbox-out {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
   to {
-    transform: translateX(-120%) rotate(-6deg);
+    transform: scale(0.96);
     opacity: 0;
   }
 }
 
-@keyframes card-exit-right {
+/* Floating bar rises from the edge it is anchored to. */
+@keyframes bar-in {
+  from {
+    transform: translateY(12px) scale(0.98);
+    opacity: 0;
+  }
   to {
-    transform: translateX(120%) rotate(6deg);
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Centred menu: keeps its -50% x offset while growing from its bottom edge. */
+@keyframes menu-in {
+  from {
+    transform: translateX(-50%) translateY(6px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Percentage, not pixels: the panel travels exactly its own width. */
+@keyframes panel-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Unmark: the card leaves to the right, then the list closes up behind it. */
+@keyframes card-exit {
+  from {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(24px) scale(0.98);
     opacity: 0;
   }
 }
 
-.card-exit-left {
-  animation: card-exit-left 250ms ease-in forwards;
+.card-exit {
+  animation: card-exit var(--dur-base) var(--ease-out) forwards;
+  pointer-events: none;
 }
 
-.card-exit-right {
-  animation: card-exit-right 250ms ease-in forwards;
+/* Hover lift, gated: a tap on a touch screen fires a false hover. */
+.tile-lift {
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .tile-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgb(0 0 0 / 0.12);
+  }
+}
+
+/* Reduced motion means fewer and gentler, not none: entrances keep their fade
+   and lose their travel, and no transition is allowed to move anything. */
 @media (prefers-reduced-motion: reduce) {
+  @keyframes banner-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes settings-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes lightbox-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes lightbox-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes bar-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes card-exit {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
   *,
   *::before,
   *::after {
-    animation-duration: 1ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 1ms !important;
+    transition-property:
+      opacity, color, background-color, border-color, box-shadow, filter !important;
   }
-  .card-exit-left,
-  .card-exit-right {
-    animation-duration: 1ms;
+
+  .tile-lift:hover {
+    transform: none;
   }
 }
 

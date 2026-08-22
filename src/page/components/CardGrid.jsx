@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronsUp, ChevronsDown } from 'lucide-react';
 import { Card } from './Card.jsx';
+import { cn } from '../lib/cn.js';
 
 const ESTIMATE_SIZE = 180;
 const LOAD_MORE_THRESHOLD = 5;
@@ -10,6 +11,7 @@ export function CardGrid({
   tweets,
   selectionMode,
   selectedIds,
+  exitingIds,
   onToggleSelect,
   onExportOne,
   onUnmarkOne,
@@ -80,7 +82,10 @@ export function CardGrid({
                   width: '100%',
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
-                className="border-b border-line"
+                className={cn(
+                  'border-b border-line',
+                  exitingIds?.has(tweet.id) && 'card-exit'
+                )}
               >
                 <Card
                   tweet={tweet}
