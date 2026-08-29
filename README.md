@@ -17,6 +17,16 @@ A Chrome (MV3) extension for browsing, organizing, and exporting your X (Twitter
 - **Export** — all or selected records as **JSON** / **CSV**; selected images as a single **ZIP** to drag into Figma; copy or download an individual image.
 - **Unmark** — remove a bookmark, one at a time or in bulk.
 
+## Install
+
+1. Download **`tappy-0.1.0-chrome.zip`** from the [latest release](https://github.com/cemtatli/tappy/releases/latest).
+2. Unzip it somewhere permanent — Chrome loads the extension from that folder, so deleting it removes the extension.
+3. Open `chrome://extensions` and turn on **Developer mode** (top right).
+4. Click **Load unpacked** and select the unzipped folder.
+5. Sign in to [x.com](https://x.com) in the same browser, then click the Tappy icon.
+
+Works in Chrome, Edge, Brave and other Chromium browsers. Not on the Chrome Web Store yet, so it will not auto-update — download a newer release to upgrade.
+
 ## How it works
 
 The extension reads **your own** bookmarks from X's GraphQL API using the session cookies (`ct0` / `auth_token`) already in your browser. Data is kept in **IndexedDB** with incremental sync (fetch the newest, page backwards through the older ones). Cookie values never leave the background service worker, and no secrets are bundled with the code.
@@ -43,7 +53,7 @@ npm run lint       # ESLint
 npm run format     # Prettier
 ```
 
-### Loading the extension
+### Loading a local build
 
 1. Run `npm run build` to produce `dist/`.
 2. Open `chrome://extensions` and enable **Developer mode**.

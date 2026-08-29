@@ -5,3 +5,5 @@ docs/superpowers/
 .agents/
 .claude/
 skills-lock.json
+
+*.zip
