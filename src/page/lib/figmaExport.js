@@ -14,6 +14,12 @@ async function tryMcpExport(_images) {
   return false;
 }
 
+// ZIP giriş adları API'den gelen değerlerle kuruluyor; path ayırıcı ve
+// kontrol karakterlerini at ki zip-slip mümkün olmasın.
+function safeName(value) {
+  return String(value ?? '').replace(/[^\w.-]/g, '_') || '_';
+}
+
 export async function exportToFigma(images, { buildZip, downloadBlob }) {
   const ok = await tryMcpExport(images);
   if (ok) return { path: 'mcp', count: images.length };
@@ -23,7 +29,7 @@ export async function exportToFigma(images, { buildZip, downloadBlob }) {
     const bytes = await fetchBytes(img.url);
     const ext = extFromUrl(img.url);
     files.push({
-      name: `${img.authorHandle}-${img.tweetId}-${img.mediaIndex}.${ext}`,
+      name: `${safeName(img.authorHandle)}-${safeName(img.tweetId)}-${img.mediaIndex}.${ext}`,
       bytes,
     });
   }

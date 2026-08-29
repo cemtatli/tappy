@@ -7,3 +7,4 @@ docs/superpowers/
 skills-lock.json
 
 *.zip
+sast/

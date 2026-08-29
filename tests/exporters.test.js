@@ -36,4 +36,17 @@ describe('toCsv', () => {
     expect(dataLine).toContain('"hello, ""world"""');
     expect(dataLine).toContain('https://a.com/1.jpg;https://a.com/2.jpg');
   });
+
+  it('neutralises spreadsheet formula prefixes in text fields', () => {
+    const csv = toCsv([
+      {
+        ...sample[0],
+        text: '=HYPERLINK("https://evil.tld")',
+        authorName: '+1',
+      },
+    ]);
+    const dataLine = csv.split('\n')[1];
+    expect(dataLine).toContain(`"'=HYPERLINK(""https://evil.tld"")"`);
+    expect(dataLine).toContain(",'+1,");
+  });
 });

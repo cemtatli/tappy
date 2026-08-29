@@ -52,6 +52,13 @@ import { exportToFigma } from './lib/figmaExport.js';
 import { buildZip } from './lib/zip.js';
 import { nextViewFromKey } from './lib/shortcuts.js';
 import { DEFAULT_COLLECTION_COLOR } from './lib/collectionColors.js';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogClose,
+} from './components/ui/AlertDialog.jsx';
 
 const EMPTY_FILTERS = { search: '' };
 
@@ -76,6 +83,10 @@ export function App() {
   const dbRef = useRef(null);
   const isLoadingOlderRef = useRef(false);
   const toastIdRef = useRef(0);
+  // Unmark sırasında X'ten yeni sayfa gelirse aynı tweet geri yazılır (zombi).
+  // Bekleyen id'leri sync/refresh yollarından dışla.
+  const pendingUnmarkRef = useRef(new Set());
+  const [unmarkConfirm, setUnmarkConfirm] = useState(null);
 
   const [allTweets, setAllTweets] = useState([]);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -181,8 +192,15 @@ export function App() {
     [pushToast]
   );
 
+  function withoutPendingUnmark(tweets) {
+    const pending = pendingUnmarkRef.current;
+    return pending.size === 0
+      ? tweets
+      : tweets.filter((t) => !pending.has(t.id));
+  }
+
   async function refreshFromDb() {
-    setAllTweets(await getAllTweets(dbRef.current));
+    setAllTweets(withoutPendingUnmark(await getAllTweets(dbRef.current)));
   }
 
   async function refreshCollections() {
@@ -283,11 +301,13 @@ export function App() {
         result.data,
         new Date().toISOString()
       );
-      const newOnes = newestCached
-        ? tweets.filter(
-            (t) => BigInt(t.sortIndex) > BigInt(newestCached.sortIndex)
-          )
-        : tweets;
+      const newOnes = withoutPendingUnmark(
+        newestCached
+          ? tweets.filter(
+              (t) => BigInt(t.sortIndex) > BigInt(newestCached.sortIndex)
+            )
+          : tweets
+      );
 
       if (newOnes.length > 0) {
         await putTweets(dbRef.current, newOnes);
@@ -312,10 +332,11 @@ export function App() {
         showStatus(`Eski kayıtlar çekilemedi: ${result.error.message}`);
         return;
       }
-      const { tweets, nextCursor } = parseBookmarksResponse(
+      const { tweets: fetched, nextCursor } = parseBookmarksResponse(
         result.data,
         new Date().toISOString()
       );
+      const tweets = withoutPendingUnmark(fetched);
       if (tweets.length > 0) {
         await putTweets(dbRef.current, tweets);
         await refreshFromDb();
@@ -379,22 +400,62 @@ export function App() {
     );
   }
 
-  async function handleUnmarkOne(id) {
-    const removed = allTweets.find((t) => t.id === id);
-    if (!removed) return;
-    await playExit([id]);
-    setAllTweets((current) => current.filter((t) => t.id !== id));
-    await deleteTweetById(dbRef.current, id);
-    const result = await requestDeleteBookmark(id);
-    if (!result.ok) {
-      await putTweets(dbRef.current, [removed]);
-      setAllTweets((current) =>
-        current.some((t) => t.id === id) ? current : [...current, removed]
-      );
-      showStatus(`Unmark başarısız, geri alındı: ${result.error.message}`);
-      return;
+  // X'teki silme geri alınamaz; tek tık yerine onay iste.
+  function handleUnmarkOne(id) {
+    if (!allTweets.some((t) => t.id === id)) return;
+    setUnmarkConfirm({ ids: [id] });
+  }
+
+  // Önce X'te sil, başarılıysa yerel kaydı kaldır. Optimistic yerel silme
+  // hata durumunda kayıp, sync ile çakışınca zombi kayıt üretiyordu.
+  async function runUnmark(ids) {
+    const removedById = new Map(
+      allTweets.filter((t) => ids.includes(t.id)).map((t) => [t.id, t])
+    );
+    const targets = Array.from(removedById.keys());
+    if (targets.length === 0) return;
+    const bulk = targets.length > 1;
+    for (const id of targets) pendingUnmarkRef.current.add(id);
+    try {
+      await playExit(targets);
+      setAllTweets((current) => current.filter((t) => !removedById.has(t.id)));
+      setSelectedIds(clearSelection());
+      const failed = [];
+      let lastError = null;
+      for (let i = 0; i < targets.length; i += 1) {
+        if (bulk)
+          setBulkProgress(`${i + 1}/${targets.length} unmark ediliyor...`);
+        const id = targets[i];
+        const result = await requestDeleteBookmark(id);
+        if (result.ok) {
+          await deleteTweetById(dbRef.current, id);
+        } else {
+          failed.push(removedById.get(id));
+          lastError = result.error;
+        }
+      }
+      if (failed.length > 0) {
+        setAllTweets((current) => [
+          ...current,
+          ...failed.filter((t) => !current.some((c) => c.id === t.id)),
+        ]);
+        showStatus(
+          bulk
+            ? `${failed.length} kayıt unmark edilemedi, geri alındı.`
+            : `Unmark başarısız, geri alındı: ${lastError?.message ?? ''}`
+        );
+      }
+      const ok = targets.length - failed.length;
+      if (ok > 0) {
+        pushToast(
+          'success',
+          bulk ? `${ok} bookmark kaldırıldı` : 'Bookmark kaldırıldı'
+        );
+      }
+    } finally {
+      for (const id of targets) pendingUnmarkRef.current.delete(id);
+      if (bulk) setBulkProgress(null);
     }
-    pushToast('success', 'Bookmark kaldırıldı');
   }
 
   function handleToggleSelectionMode() {
@@ -426,37 +487,10 @@ export function App() {
     downloadFile('bookmarks-selected.csv', toCsv(selected), 'text/csv');
   }
 
-  async function handleBulkUnmark() {
+  function handleBulkUnmark() {
     const ids = Array.from(selectedIds);
-    const removedById = new Map(
-      allTweets.filter((t) => selectedIds.has(t.id)).map((t) => [t.id, t])
-    );
-    await playExit(ids);
-    setAllTweets((current) => current.filter((t) => !selectedIds.has(t.id)));
-    setSelectedIds(clearSelection());
-    for (const id of ids) {
-      await deleteTweetById(dbRef.current, id);
-    }
-    const failed = [];
-    for (let i = 0; i < ids.length; i += 1) {
-      setBulkProgress(`${i + 1}/${ids.length} unmark ediliyor...`);
-      const result = await requestDeleteBookmark(ids[i]);
-      if (!result.ok) {
-        const t = removedById.get(ids[i]);
-        if (t) failed.push(t);
-      }
-    }
-    if (failed.length > 0) {
-      await putTweets(dbRef.current, failed);
-      setAllTweets((current) => [
-        ...current,
-        ...failed.filter((t) => !current.some((c) => c.id === t.id)),
-      ]);
-      showStatus(`${failed.length} kayıt unmark edilemedi, geri alındı.`);
-    }
-    const ok = ids.length - failed.length;
-    if (ok > 0) pushToast('success', `${ok} bookmark kaldırıldı`);
-    setBulkProgress(null);
+    if (ids.length === 0) return;
+    setUnmarkConfirm({ ids });
   }
 
   const handleToggleImageSelect = useCallback((imageKey) => {
@@ -677,6 +711,36 @@ export function App() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
+      <AlertDialog
+        open={Boolean(unmarkConfirm)}
+        onOpenChange={(open) => {
+          if (!open) setUnmarkConfirm(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle>
+            {unmarkConfirm?.ids.length > 1
+              ? `${unmarkConfirm.ids.length} bookmark kaldırılsın mı?`
+              : 'Bookmark kaldırılsın mı?'}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            X&apos;teki bookmark listenden de silinir. Bu işlem geri alınamaz.
+          </AlertDialogDescription>
+          <div className="mt-6 flex justify-end gap-2">
+            <AlertDialogClose>Vazgeç</AlertDialogClose>
+            <AlertDialogClose
+              className="bg-danger text-white hover:bg-danger/90"
+              onClick={() => {
+                const ids = unmarkConfirm?.ids ?? [];
+                setUnmarkConfirm(null);
+                runUnmark(ids);
+              }}
+            >
+              Kaldır
+            </AlertDialogClose>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
       <ImageLightbox
         images={lightboxImages}
         initialKey={lightbox?.image.imageKey ?? null}

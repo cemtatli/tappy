@@ -27,14 +27,14 @@ export function buildBookmarksRequest(cursor, authHeaders, config) {
     features: JSON.stringify(config.bookmarksFeatures),
   });
   return {
-    url: `${GRAPHQL_BASE}/${config.bookmarksQueryId}/Bookmarks?${params.toString()}`,
+    url: `${GRAPHQL_BASE}/${encodeURIComponent(config.bookmarksQueryId)}/Bookmarks?${params.toString()}`,
     options: { method: 'GET', headers: authHeaders, credentials: 'include' },
   };
 }
 
 export function buildDeleteBookmarkRequest(tweetId, authHeaders, config) {
   return {
-    url: `${GRAPHQL_BASE}/${config.deleteBookmarkQueryId}/DeleteBookmark`,
+    url: `${GRAPHQL_BASE}/${encodeURIComponent(config.deleteBookmarkQueryId)}/DeleteBookmark`,
     options: {
       method: 'POST',
       headers: { ...authHeaders, 'content-type': 'application/json' },
@@ -110,7 +110,17 @@ export function createXApi({
         err.status = response.status;
         throw err;
       }
-      return response.json();
+      const json = await response.json();
+      // X, GraphQL hatalarını HTTP 200 ile döndürebilir; bunu başarı sayarsak
+      // yerel kayıt silinir ama bookmark X'te kalır.
+      if (Array.isArray(json?.errors) && json.errors.length > 0) {
+        const err = new Error(
+          `Unmark başarısız: ${json.errors[0]?.message ?? 'GraphQL error'}`
+        );
+        err.code = 'GRAPHQL_ERROR';
+        throw err;
+      }
+      return json;
     },
   };
 }

@@ -161,4 +161,30 @@ describe('createXApi', () => {
 
     await expect(api.fetchBookmarksPage()).resolves.toEqual({ data: {} });
   });
+
+  it('deleteBookmark throws when a 200 body carries GraphQL errors', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ errors: [{ message: 'Denied' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    );
+    const xApi = createXApi({
+      rateLimiter: { enqueue: (fn) => fn() },
+      getAuthCookies: async () => ({ ct0: 'CSRF', isLoggedIn: true }),
+      config,
+      fetchFn,
+    });
+    await expect(xApi.deleteBookmark('1')).rejects.toMatchObject({
+      code: 'GRAPHQL_ERROR',
+    });
+  });
+
+  it('url-encodes query ids so they cannot escape the path segment', () => {
+    const { url } = buildDeleteBookmarkRequest('1', authHeaders, {
+      ...config,
+      deleteBookmarkQueryId: 'a/../b',
+    });
+    expect(url).toBe('https://x.com/i/api/graphql/a%2F..%2Fb/DeleteBookmark');
+  });
 });

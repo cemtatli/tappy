@@ -1,6 +1,9 @@
 function csvEscape(value) {
-  const str = String(value ?? '');
-  if (/[",\n]/.test(str)) {
+  let str = String(value ?? '');
+  // Formül başlangıç karakterleri (=, +, -, @, tab, CR) Excel/LibreOffice'te
+  // çalıştırılır; tweet metni saldırgan kontrolünde olduğu için nötrleştir.
+  if (/^[=+\-@\t\r]/.test(str)) str = `'${str}`;
+  if (/[",\n\r]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;

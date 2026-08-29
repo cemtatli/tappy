@@ -4,6 +4,9 @@ import {
   OP_TO_FIELD,
   isBookmarksChunkUrl,
   bearerFromHeaders,
+  isTrustedInitiator,
+  isValidQueryId,
+  isValidBearerToken,
 } from '../src/background/xCapture.js';
 
 describe('parseGraphqlUrl', () => {
@@ -85,5 +88,40 @@ describe('bearerFromHeaders', () => {
   it('returns null when no bearer authorization present', () => {
     expect(bearerFromHeaders([{ name: 'accept', value: '*/*' }])).toBeNull();
     expect(bearerFromHeaders(undefined)).toBeNull();
+  });
+});
+
+describe('isTrustedInitiator', () => {
+  it('accepts requests initiated by x.com / twitter.com origins', () => {
+    expect(isTrustedInitiator({ initiator: 'https://x.com' })).toBe(true);
+    expect(isTrustedInitiator({ initiator: 'https://twitter.com' })).toBe(true);
+  });
+
+  it('rejects third-party, missing and non-https initiators', () => {
+    expect(isTrustedInitiator({ initiator: 'https://evil.example' })).toBe(
+      false
+    );
+    expect(isTrustedInitiator({ initiator: 'http://x.com' })).toBe(false);
+    expect(isTrustedInitiator({})).toBe(false);
+    expect(isTrustedInitiator(undefined)).toBe(false);
+  });
+});
+
+describe('isValidQueryId / isValidBearerToken', () => {
+  it('accepts well-formed values', () => {
+    expect(isValidQueryId('QID123456789012345678')).toBe(true);
+    expect(
+      isValidBearerToken(
+        'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D'
+      )
+    ).toBe(true);
+  });
+
+  it('rejects path-breaking or short values', () => {
+    expect(isValidQueryId('../evil')).toBe(false);
+    expect(isValidQueryId('short')).toBe(false);
+    expect(isValidQueryId('a b c d e f g h i j k l m n o p')).toBe(false);
+    expect(isValidBearerToken('with space token value here')).toBe(false);
+    expect(isValidBearerToken('')).toBe(false);
   });
 });

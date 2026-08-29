@@ -13,6 +13,9 @@ import {
   OP_TO_FIELD,
   isBookmarksChunkUrl,
   bearerFromHeaders,
+  isTrustedInitiator,
+  isValidQueryId,
+  isValidBearerToken,
 } from './xCapture.js';
 import {
   PUBLIC_BEARER_TOKEN,
@@ -60,7 +63,12 @@ chrome.action.onClicked.addListener(() => {
   chrome.tabs.create({ url: chrome.runtime.getURL('index.html') });
 });
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Manifest'te externally_connectable yok; yine de yalnızca kendi eklenti
+  // sayfalarımızdan gelen mesajları işle.
+  if (sender?.id !== chrome.runtime.id) return false;
+  if (!message || typeof message !== 'object') return false;
+
   if (message.type === MESSAGE_TYPES.REQUEST_BOOKMARKS_PAGE) {
     withAuthHeal(() =>
       buildXApi().then((xApi) =>
@@ -75,7 +83,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === MESSAGE_TYPES.REQUEST_DELETE_BOOKMARK) {
     withAuthHeal(() =>
       buildXApi().then((xApi) =>
-        withBackoffRetry(() => xApi.deleteBookmark(message.tweetId))
+        withBackoffRetry(() => xApi.deleteBookmark(String(message.tweetId)))
       )
     )
       .then((data) => sendResponse({ ok: true, data }))
@@ -147,9 +155,11 @@ async function captureField(field, value) {
 }
 
 function onBeforeRequest(details) {
+  if (!isTrustedInitiator(details)) return;
   const g = parseGraphqlUrl(details.url);
   if (g && OP_TO_FIELD[g.operationName]) {
-    captureField(OP_TO_FIELD[g.operationName], g.queryId);
+    if (isValidQueryId(g.queryId))
+      captureField(OP_TO_FIELD[g.operationName], g.queryId);
     return;
   }
   // The Bookmarks bundle carries both queryIds, so one fetch yields both.
@@ -159,8 +169,10 @@ function onBeforeRequest(details) {
       .then((r) => (r.ok ? r.text() : ''))
       .then((src) => {
         const f = parseXConfig(src);
-        captureField('bookmarksQueryId', f.bookmarksQueryId);
-        captureField('deleteBookmarkQueryId', f.deleteBookmarkQueryId);
+        if (isValidQueryId(f.bookmarksQueryId))
+          captureField('bookmarksQueryId', f.bookmarksQueryId);
+        if (isValidQueryId(f.deleteBookmarkQueryId))
+          captureField('deleteBookmarkQueryId', f.deleteBookmarkQueryId);
       })
       .catch(() => {});
   }
@@ -169,8 +181,9 @@ function onBeforeRequest(details) {
 function onBeforeSendHeaders(details) {
   // Synchronous bail-out: skip the header scan and promise allocation per request.
   if (captured.bearerToken) return;
+  if (!isTrustedInitiator(details)) return;
   const tok = bearerFromHeaders(details.requestHeaders);
-  if (tok) captureField('bearerToken', tok);
+  if (isValidBearerToken(tok)) captureField('bearerToken', tok);
 }
 
 function attachCapture() {

@@ -6,6 +6,37 @@
 // such as /1.1/graphql/viewer_context.
 const GRAPHQL_URL_RE = /\/graphql\/([^/?]+)\/([A-Za-z0-9]+)/;
 
+// webRequest listener'ları URL'ye göre filtreler; initiator'ı biz kontrol etmezsek
+// herhangi bir site <img src="https://x.com/i/api/graphql/EVIL/DeleteBookmark">
+// ile yakalanan queryId'yi zehirleyebilir. Yalnızca X'in kendi origin'lerinden
+// gelen istekler güvenilir.
+const TRUSTED_INITIATORS = new Set([
+  'https://x.com',
+  'https://www.x.com',
+  'https://mobile.x.com',
+  'https://twitter.com',
+  'https://www.twitter.com',
+  'https://mobile.twitter.com',
+]);
+
+// X persisted-query id'leri URL-safe base64 benzeri kısa string'ler.
+const QUERY_ID_RE = /^[A-Za-z0-9_-]{16,64}$/;
+// Bearer token base64/URL-encoded; boşluk veya path karakteri içermez.
+const BEARER_RE = /^[A-Za-z0-9%+/=_-]{20,}$/;
+
+export function isTrustedInitiator(details) {
+  const origin = details?.initiator;
+  return typeof origin === 'string' && TRUSTED_INITIATORS.has(origin);
+}
+
+export function isValidQueryId(value) {
+  return typeof value === 'string' && QUERY_ID_RE.test(value);
+}
+
+export function isValidBearerToken(value) {
+  return typeof value === 'string' && BEARER_RE.test(value);
+}
+
 export function parseGraphqlUrl(url) {
   const m = url.match(GRAPHQL_URL_RE);
   return m ? { queryId: m[1], operationName: m[2] } : null;
