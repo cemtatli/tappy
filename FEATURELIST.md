@@ -16,6 +16,7 @@ Image-first, local-only, light Apple-style UI. React 19 · Tailwind 4 · Base UI
 
 - Tappy logo + wordmark at the top.
 - **Search** across text / author / handle.
+- **Advanced search** — collapsible filters for author name / @handle, publication date range (local calendar days, end day included), image presence, and minimum likes. Filters combine with text search and the selected collection in both Grid and Canvas; result count and clear-search action remain visible while filters are active. Searches locally loaded records.
 - **Sources**: `Tümü` (all), `Görseller` (image-only), `Favoriler` (quick-favorites), each with counts.
 - **Collections** list with per-collection color dot + counts.
 - Footer actions: `Seç` (selection mode), `Tümünü export et`, `Ayarlar`.

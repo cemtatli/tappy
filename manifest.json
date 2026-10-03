@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tappy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "X bookmarklarını kart halinde göster, hızlıca export et veya unmark et.",
   "icons": {
     "16": "src/assets/icons/icon-16.png",

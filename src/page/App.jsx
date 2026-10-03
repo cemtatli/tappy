@@ -15,7 +15,7 @@ import {
   FAVORITES_ID,
 } from '../shared/db.js';
 import { parseBookmarksResponse } from '../shared/tweetModel.js';
-import { applyFilters } from '../shared/filters.js';
+import { applyFilters, EMPTY_FILTERS } from '../shared/filters.js';
 import { sortTweets } from '../shared/sort.js';
 import { toJson, toCsv } from '../shared/exporters.js';
 import {
@@ -59,8 +59,6 @@ import {
   AlertDialogDescription,
   AlertDialogClose,
 } from './components/ui/AlertDialog.jsx';
-
-const EMPTY_FILTERS = { search: '' };
 
 function downloadFile(filename, content, mimeType) {
   const blob = new Blob([content], { type: mimeType });
@@ -136,13 +134,11 @@ export function App() {
     if (typeof source === 'object') {
       const c = collections.find((x) => x.id === source.collectionId);
       if (!c) return [];
-      const byId = new Map(allTweets.map((t) => [t.id, t]));
+      const byId = new Map(filteredTweets.map((t) => [t.id, t]));
       return imagesForCollection(c, byId);
     }
-    return flattenImages(
-      sortTweets(applyFilters(sourceTweets, filters), sortMode)
-    );
-  }, [source, collections, allTweets, sourceTweets, filters, sortMode]);
+    return flattenImages(filteredTweets);
+  }, [source, collections, filteredTweets]);
 
   useEffect(() => {
     savePrefs({ sortMode });
@@ -614,6 +610,13 @@ export function App() {
         collections={userCollections}
         counts={counts}
         search={filters.search}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={() => setFilters({ ...EMPTY_FILTERS })}
+        resultCount={
+          viewMode === 'canvas' ? canvasImages.length : filteredTweets.length
+        }
+        resultLabel={viewMode === 'canvas' ? 'görsel' : 'bookmark'}
         onSearchChange={(v) => handleFilterChange('search', v)}
         viewMode={viewMode}
         onViewModeChange={setViewMode}

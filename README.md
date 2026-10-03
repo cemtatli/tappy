@@ -13,13 +13,13 @@ A Chrome (MV3) extension for browsing, organizing, and exporting your X (Twitter
 - **View switch** — `Grid ⇄ Canvas` from the sidebar, or **G** / **C** on the keyboard.
 - **Lightbox** — full-screen image growing out of the clicked tile, right-hand action bar, bottom strip for multi-image tweets, arrow-key navigation.
 - **Collections** — named collections (create / rename / delete), per-collection color, single and bulk add, plus a non-deletable `Favorites`.
-- **Search & sort** — search by text / author / handle; sort by newest, oldest, or most liked.
+- **Search & sort** — search by text / author / handle; combine author, inclusive local publication-date range, image presence, and minimum likes filters across Grid and Canvas, including collections. Search applies to locally loaded records. Sort by newest, oldest, or most liked.
 - **Export** — all or selected records as **JSON** / **CSV**; selected images as a single **ZIP** to drag into Figma; copy or download an individual image.
 - **Unmark** — remove a bookmark, one at a time or in bulk.
 
 ## Install
 
-1. Download **`tappy-0.1.0-chrome.zip`** from the [latest release](https://github.com/cemtatli/tappy/releases/latest).
+1. Download **`tappy-0.2.0-chrome.zip`** from the [latest release](https://github.com/cemtatli/tappy/releases/latest).
 2. Unzip it somewhere permanent — Chrome loads the extension from that folder, so deleting it removes the extension.
 3. Open `chrome://extensions` and turn on **Developer mode** (top right).
 4. Click **Load unpacked** and select the unzipped folder.
@@ -51,7 +51,15 @@ npm run build      # vite build + copy static files → dist/
 npm test           # Vitest suite
 npm run lint       # ESLint
 npm run format     # Prettier
+npm run package:release # build + validated ZIP and SHA256SUMS.txt → releases/<version>/
 ```
+
+### Packaging a release
+
+Run `npm ci`, `npm test`, `npm run lint`, then `npm run package:release`.
+Packaging requires the `zip` and `unzip` command-line tools. It checks that package and manifest versions match, validates the extension entry points, and includes installation instructions and the MIT license. Only the production extension files are archived; dependencies, tests, and local bookmark data are excluded.
+
+The output directory must be new: existing release artifacts are never overwritten. Upload the ZIP and `SHA256SUMS.txt` from `releases/<version>/` together. On macOS or Linux, run `shasum -a 256 -c SHA256SUMS.txt` in the download folder to verify the ZIP.
 
 ### Loading a local build
 

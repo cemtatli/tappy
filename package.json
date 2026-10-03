@@ -1,6 +1,6 @@
 {
   "name": "x-bookmarker",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -8,6 +8,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "vite build && node scripts/copy-static.mjs",
+    "package:release": "node scripts/package-release.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint ."
