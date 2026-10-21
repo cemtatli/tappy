@@ -1,29 +1,50 @@
 import {
   memo,
-  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
-import { layoutMasonry, visibleTiles } from '../../lib/canvasLayout.js';
-import { clampPan, panBounds, rubberBand } from '../../lib/canvasPan.js';
-import { reanchorPan } from '../../lib/canvasZoom.js';
+import { layoutScatter, visibleTiles } from '../../lib/canvasLayout.js';
+import { clampZoom } from '../../lib/canvasZoom.js';
 import { CanvasTile } from './CanvasTile.jsx';
 
-const COLUMN_WIDTH = 220;
-const GAP = 16;
-const ZOOM_MIN = 0.2;
-const ZOOM_MAX = 3;
-const RUBBER_RESISTANCE = 0.3;
-const MOMENTUM_DECAY = 0.94;
-const SPRING_LERP = 0.18;
-const SPRING_STOP = 0.5;
+const DRAG_THRESHOLD = 5;
+const MOMENTUM_DECAY = 0.92;
+const OVERSCAN = 320;
+const HIGHLIGHT_MS = 3200;
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const easeInOutCubic = (t) =>
+  t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+
+// The first few cards form the landing cluster: centre it, but leave the
+// margins airy enough that cards at the edge invite panning.
+function homePan(layout, size, zoom) {
+  const sample = layout.tiles.slice(0, Math.min(4, layout.tiles.length));
+  if (sample.length === 0) {
+    return { x: size.width / 2, y: size.height / 2 };
+  }
+  const minX = Math.min(...sample.map((tile) => tile.x));
+  const maxX = Math.max(...sample.map((tile) => tile.x + tile.w));
+  const minY = Math.min(...sample.map((tile) => tile.y));
+  const maxY = Math.max(...sample.map((tile) => tile.y + tile.h));
+  return {
+    x: size.width / 2 - ((minX + maxX) / 2) * zoom,
+    y: size.height / 2 - ((minY + maxY) / 2) * zoom,
+  };
+}
+
+function tilePan(tile, size, zoom) {
+  return {
+    x: size.width / 2 - (tile.x + tile.w / 2) * zoom,
+    y: size.height / 2 - (tile.y + tile.h / 2) * zoom,
+  };
+}
 
 export function ImageCanvas({
   images,
@@ -33,58 +54,89 @@ export function ImageCanvas({
   selectedIds,
   onToggleSelect,
   onOpenLightbox,
+  focusRequest,
+  viewKey,
 }) {
   const viewportRef = useRef(null);
-  const [size, setSize] = useState({ width: 1000, height: 800 });
+  const [size, setSize] = useState(() => ({
+    width: typeof window === 'undefined' ? 1000 : window.innerWidth || 1000,
+    height: typeof window === 'undefined' ? 800 : window.innerHeight || 800,
+  }));
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [ratios, setRatios] = useState(() => new Map());
   const [dragging, setDragging] = useState(false);
+  const [focusedKey, setFocusedKey] = useState(null);
 
+  // rAF batched pan: drag and momentum can fire faster than React renders.
   const pendingPanRef = useRef(null);
   const rafRef = useRef(0);
+  const panRef = useRef(pan);
+  const zoomRef = useRef(zoom);
+  const dragRef = useRef(null);
+  const momentumRef = useRef(0);
+  const tweenRef = useRef(0);
+  const velocityRef = useRef({ x: 0, y: 0 });
+  const lastMoveRef = useRef(null);
+  const highlightTimerRef = useRef(0);
+  const focusHandledRef = useRef(null);
+  const didInitRef = useRef(false);
+  const prevViewKeyRef = useRef(viewKey);
+  const prevZoomRef = useRef(zoom);
+  const zoomAnchorRef = useRef(null);
+  const skipAnchorRef = useRef(false);
+  const suppressClickRef = useRef(false);
+
+  function commitPan(next) {
+    panRef.current = next;
+    setPan(next);
+  }
 
   function schedulePan(next) {
     pendingPanRef.current = next;
     if (rafRef.current) return;
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = 0;
-      if (pendingPanRef.current) {
-        setPan(pendingPanRef.current);
-        panRef.current = pendingPanRef.current;
-      }
+      if (pendingPanRef.current) commitPan(pendingPanRef.current);
     });
   }
 
-  const pendingRatiosRef = useRef(new Map());
-  const ratioFlushRef = useRef(0);
+  function cancelMomentum() {
+    if (momentumRef.current) {
+      cancelAnimationFrame(momentumRef.current);
+      momentumRef.current = 0;
+    }
+  }
 
-  const onImgLoad = useCallback((e, imageKey) => {
-    const { naturalWidth, naturalHeight } = e.target;
-    if (!naturalWidth) return;
-    pendingRatiosRef.current.set(imageKey, naturalHeight / naturalWidth);
-    if (ratioFlushRef.current) return;
-    ratioFlushRef.current = requestAnimationFrame(() => {
-      ratioFlushRef.current = 0;
-      setRatios((prev) => {
-        const next = new Map(prev);
-        for (const [k, v] of pendingRatiosRef.current) next.set(k, v);
-        pendingRatiosRef.current.clear();
-        return next;
+  function cancelTween() {
+    if (tweenRef.current) {
+      cancelAnimationFrame(tweenRef.current);
+      tweenRef.current = 0;
+    }
+  }
+
+  function animatePanTo(target, duration = 620) {
+    cancelTween();
+    cancelMomentum();
+    if (prefersReducedMotion()) {
+      commitPan(target);
+      return;
+    }
+    const from = { ...panRef.current };
+    const startedAt = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - startedAt) / duration);
+      const eased = easeInOutCubic(t);
+      commitPan({
+        x: from.x + (target.x - from.x) * eased,
+        y: from.y + (target.y - from.y) * eased,
       });
-    });
-  }, []);
-
-  const dragRef = useRef(null);
-  const momentumRef = useRef(0);
-  const springRef = useRef(0);
-  const velRef = useRef({ x: 0, y: 0 });
-  const lastMoveRef = useRef(null);
-  // Keep latest pan/zoom/bounds accessible inside rAF closures without stale captures
-  const panRef = useRef({ x: 0, y: 0 });
-  const zoomRef = useRef(zoom);
-  const boundsRef = useRef(null);
-  // Previous world height, needed to reanchor after a reflow.
-  const prevWorldHeightRef = useRef(null);
+      if (t < 1) {
+        tweenRef.current = requestAnimationFrame(step);
+      } else {
+        tweenRef.current = 0;
+      }
+    }
+    tweenRef.current = requestAnimationFrame(step);
+  }
 
   useEffect(() => {
     panRef.current = pan;
@@ -98,161 +150,147 @@ export function ImageCanvas({
     if (!el) return;
     const update = () =>
       setSize({
-        width: el.clientWidth || 1000,
-        height: el.clientHeight || 800,
+        width: el.clientWidth || window.innerWidth || 1000,
+        height: el.clientHeight || window.innerHeight || 800,
       });
     update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
+  const layout = useMemo(() => layoutScatter(images), [images]);
   const imagesByKey = useMemo(
-    () => new Map(images.map((i) => [i.imageKey, i])),
+    () => new Map(images.map((image) => [image.imageKey, image])),
     [images]
   );
 
-  // Zoom is a layout parameter, not a transform: the column width scales, the
-  // viewport does not, so the column count drops and the masonry reflows gapless.
-  const layout = useMemo(
-    () =>
-      layoutMasonry(images, {
-        columnWidth: COLUMN_WIDTH * zoom,
-        gap: GAP,
-        containerWidth: size.width,
-        ratios,
-      }),
-    [images, size.width, ratios, zoom]
-  );
-
-  // The world is already at real size in reflow mode, so pass zoom: 1.
-  const bounds = useMemo(
-    () =>
-      panBounds({
-        worldWidth: layout.worldWidth,
-        worldHeight: layout.worldHeight,
-        viewportWidth: size.width,
-        viewportHeight: size.height,
-        zoom: 1,
-        margin: 48,
-      }),
-    [layout.worldWidth, layout.worldHeight, size.width, size.height]
-  );
+  // Landing position. Runs once, and again whenever the query itself changes —
+  // filtering reflows the world, so staying deep in the old layout would show
+  // blank space.
+  useLayoutEffect(() => {
+    if (didInitRef.current) return;
+    if (!layout.tiles.length || size.width < 2) return;
+    didInitRef.current = true;
+    commitPan(homePan(layout, size, zoomRef.current));
+  }, [layout, size]);
 
   useEffect(() => {
-    boundsRef.current = bounds;
-  }, [bounds]);
+    if (prevViewKeyRef.current === viewKey) return;
+    prevViewKeyRef.current = viewKey;
+    cancelMomentum();
+    cancelTween();
+    setFocusedKey(null);
+    if (layout.tiles.length > 0) {
+      commitPan(homePan(layout, size, zoomRef.current));
+    }
+  }, [viewKey, layout, size]);
 
-  // Zoom changes the column count and therefore the world height; recompute pan.y
-  // so the visible vertical centre stays put.
-  useEffect(() => {
-    const newWorldH = layout.worldHeight;
-    const oldWorldH = prevWorldHeightRef.current;
-    prevWorldHeightRef.current = newWorldH;
-    if (oldWorldH == null || oldWorldH === newWorldH) return;
-    const nextY = reanchorPan(
-      panRef.current.y,
-      size.height,
-      oldWorldH,
-      newWorldH
-    );
-    const clamped = clampPan({ x: panRef.current.x, y: nextY }, bounds);
-    panRef.current = clamped;
-    setPan(clamped);
-    // Reanchor on zoom only; bounds/size are read fresh from the closure.
+  // Zoom is a world transform. Keep the world point under the pointer (or the
+  // viewport centre for toolbar zooms) fixed while the scale changes.
+  useLayoutEffect(() => {
+    const prev = prevZoomRef.current;
+    prevZoomRef.current = zoom;
+    if (prev === zoom) return;
+    if (skipAnchorRef.current) {
+      skipAnchorRef.current = false;
+      return;
+    }
+    const anchor = zoomAnchorRef.current ?? {
+      x: size.width / 2,
+      y: size.height / 2,
+    };
+    zoomAnchorRef.current = null;
+    const worldX = (anchor.x - panRef.current.x) / prev;
+    const worldY = (anchor.y - panRef.current.y) / prev;
+    commitPan({
+      x: anchor.x - worldX * zoom,
+      y: anchor.y - worldY * zoom,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoom]);
 
-  // World is 1:1 in reflow mode, so screen and world coordinates match.
-  const overscan = COLUMN_WIDTH; // world-coordinate overscan
+  useEffect(() => {
+    if (!focusRequest) return;
+    if (focusHandledRef.current === focusRequest.nonce) return;
+    if (!layout.tiles.length || size.width < 2) return;
+    focusHandledRef.current = focusRequest.nonce;
+
+    if (focusRequest.type === 'home') {
+      setFocusedKey(null);
+      cancelMomentum();
+      cancelTween();
+      const targetZoom = 1;
+      if (Math.abs(zoom - targetZoom) > 0.001) {
+        skipAnchorRef.current = true;
+        onZoomChange(targetZoom);
+      }
+      animatePanTo(homePan(layout, size, targetZoom), 680);
+      return;
+    }
+
+    const tile = layout.tiles.find(
+      (item) => item.imageKey === focusRequest.imageKey
+    );
+    if (!tile) return;
+
+    cancelMomentum();
+    cancelTween();
+    const targetZoom = Math.min(1.4, Math.max(zoom, 0.92));
+    if (Math.abs(zoom - targetZoom) > 0.001) {
+      skipAnchorRef.current = true;
+      onZoomChange(targetZoom);
+    }
+    animatePanTo(tilePan(tile, size, targetZoom), 700);
+    setFocusedKey(tile.imageKey);
+    window.clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = window.setTimeout(
+      () => setFocusedKey(null),
+      HIGHLIGHT_MS
+    );
+    // animatePanTo is recreated per render on purpose; the nonce guard above
+    // ensures this effect only reacts to a new request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequest, layout, size, zoom, onZoomChange]);
+
+  const inverseZoom = 1 / zoom;
   const viewportWorld = {
-    x: -pan.x - overscan,
-    y: -pan.y - overscan,
-    width: size.width + overscan * 2,
-    height: size.height + overscan * 2,
+    x: -pan.x * inverseZoom - OVERSCAN,
+    y: -pan.y * inverseZoom - OVERSCAN,
+    width: size.width * inverseZoom + OVERSCAN * 2,
+    height: size.height * inverseZoom + OVERSCAN * 2,
   };
   const shown = useMemo(
     () => visibleTiles(layout.tiles, viewportWorld),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [layout, pan.x, pan.y, size.width, size.height]
+    [layout, pan.x, pan.y, size.width, size.height, zoom]
   );
 
-  function cancelMomentum() {
-    if (momentumRef.current) {
-      cancelAnimationFrame(momentumRef.current);
-      momentumRef.current = 0;
-    }
-  }
-  function cancelSpring() {
-    if (springRef.current) {
-      cancelAnimationFrame(springRef.current);
-      springRef.current = 0;
-    }
-  }
-
-  function startSpringBack(fromPan) {
-    cancelSpring();
+  function startMomentum(initialVelocity) {
     cancelMomentum();
-    if (prefersReducedMotion()) {
-      const clamped = clampPan(fromPan, boundsRef.current);
-      setPan(clamped);
-      panRef.current = clamped;
-      return;
-    }
+    cancelTween();
+    let vx = initialVelocity.x;
+    let vy = initialVelocity.y;
     function step() {
-      const b = boundsRef.current;
-      const cur = panRef.current;
-      const target = clampPan(cur, b);
-      const dx = target.x - cur.x;
-      const dy = target.y - cur.y;
-      if (Math.abs(dx) < SPRING_STOP && Math.abs(dy) < SPRING_STOP) {
-        setPan(target);
-        panRef.current = target;
-        springRef.current = 0;
-        return;
-      }
-      const next = { x: cur.x + dx * SPRING_LERP, y: cur.y + dy * SPRING_LERP };
-      setPan(next);
-      panRef.current = next;
-      springRef.current = requestAnimationFrame(step);
-    }
-    springRef.current = requestAnimationFrame(step);
-  }
-
-  function startMomentum(initVel) {
-    cancelMomentum();
-    cancelSpring();
-    let vx = initVel.x;
-    let vy = initVel.y;
-    function step() {
-      if (Math.abs(vx) < 0.1 && Math.abs(vy) < 0.1) {
+      if (Math.abs(vx) < 0.08 && Math.abs(vy) < 0.08) {
         momentumRef.current = 0;
-        startSpringBack(panRef.current);
         return;
       }
-      const b = boundsRef.current;
-      const cur = panRef.current;
-      const raw = { x: cur.x + vx, y: cur.y + vy };
-      const clamped = clampPan(raw, b);
-      // At edges, kill velocity on that axis
-      if (raw.x !== clamped.x) vx = 0;
-      if (raw.y !== clamped.y) vy = 0;
       vx *= MOMENTUM_DECAY;
       vy *= MOMENTUM_DECAY;
-      setPan(clamped);
-      panRef.current = clamped;
+      commitPan({
+        x: panRef.current.x + vx,
+        y: panRef.current.y + vy,
+      });
       momentumRef.current = requestAnimationFrame(step);
     }
     momentumRef.current = requestAnimationFrame(step);
   }
 
-  const DRAG_THRESHOLD = 5;
-
   function onPointerDown(e) {
+    if (e.button != null && e.button !== 0) return;
     cancelMomentum();
-    cancelSpring();
-    // Defer pointer capture until the pointer passes DRAG_THRESHOLD, so a plain
-    // click still reaches the tile's onClick and opens the lightbox.
+    cancelTween();
     dragRef.current = {
       sx: e.clientX,
       sy: e.clientY,
@@ -261,57 +299,56 @@ export function ImageCanvas({
       active: false,
     };
     lastMoveRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
-    velRef.current = { x: 0, y: 0 };
+    velocityRef.current = { x: 0, y: 0 };
   }
 
   function onPointerMove(e) {
-    if (!dragRef.current) return;
-    const d = dragRef.current;
+    const drag = dragRef.current;
+    if (!drag) return;
 
-    if (!d.active) {
-      const dist = Math.hypot(e.clientX - d.sx, e.clientY - d.sy);
-      if (dist < DRAG_THRESHOLD) return;
-      d.active = true;
+    if (!drag.active) {
+      const distance = Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy);
+      if (distance < DRAG_THRESHOLD) return;
+      drag.active = true;
       setDragging(true);
       e.currentTarget.setPointerCapture(e.pointerId);
     }
 
-    const b = boundsRef.current;
-    const rawX = d.px + (e.clientX - d.sx);
-    const rawY = d.py + (e.clientY - d.sy);
-    const rbX = rubberBand(rawX, b.minX, b.maxX, RUBBER_RESISTANCE);
-    const rbY = rubberBand(rawY, b.minY, b.maxY, RUBBER_RESISTANCE);
     const now = performance.now();
     const last = lastMoveRef.current;
     if (last) {
       const dt = now - last.t || 1;
-      velRef.current = {
-        x: ((e.clientX - last.x) / dt) * 16, // ~16ms frame budget
+      velocityRef.current = {
+        x: ((e.clientX - last.x) / dt) * 16,
         y: ((e.clientY - last.y) / dt) * 16,
       };
     }
     lastMoveRef.current = { x: e.clientX, y: e.clientY, t: now };
-    schedulePan({ x: rbX, y: rbY });
+    schedulePan({
+      x: drag.px + (e.clientX - drag.sx),
+      y: drag.py + (e.clientY - drag.sy),
+    });
   }
 
   function onPointerUp(e) {
-    if (!dragRef.current) return;
-    const wasDrag = dragRef.current.active;
+    const drag = dragRef.current;
+    if (!drag) return;
     dragRef.current = null;
     setDragging(false);
 
-    if (wasDrag) {
+    if (drag.active) {
+      suppressClickRef.current = true;
+      window.setTimeout(() => {
+        suppressClickRef.current = false;
+      }, 0);
       try {
         e.currentTarget.releasePointerCapture(e.pointerId);
       } catch {
-        // Capture may already have been released.
+        // Capture may already be gone.
       }
-      const vel = velRef.current;
-      const speed = Math.hypot(vel.x, vel.y);
-      if (speed > 1.5) {
-        startMomentum(vel);
-      } else {
-        startSpringBack(panRef.current);
+      const velocity = velocityRef.current;
+      if (Math.hypot(velocity.x, velocity.y) > 1.5) {
+        startMomentum(velocity);
       }
     }
   }
@@ -321,36 +358,44 @@ export function ImageCanvas({
     if (!el) return;
     function onWheel(e) {
       e.preventDefault();
-      const b = boundsRef.current;
-      if (e.ctrlKey) {
-        // Trackpad pinch: only set the zoom — the zoom effect reanchors pan.y.
-        const curZoom = zoomRef.current;
-        const factor = e.deltaY < 0 ? 1.05 : 0.95;
-        const nextZoom = Math.min(
-          ZOOM_MAX,
-          Math.max(ZOOM_MIN, curZoom * factor)
-        );
-        onZoomChange(nextZoom);
+      if (e.ctrlKey || e.metaKey) {
+        const rect = el.getBoundingClientRect();
+        zoomAnchorRef.current = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        };
+        onZoomChange(clampZoom(zoomRef.current * Math.exp(-e.deltaY * 0.0022)));
       } else {
-        // Two-finger scroll or mouse wheel → pan (hard clamp, no rubber-band)
-        const cur = panRef.current;
-        const rawPan = { x: cur.x - e.deltaX, y: cur.y - e.deltaY };
-        const clamped = clampPan(rawPan, b);
-        schedulePan(clamped);
+        schedulePan({
+          x: panRef.current.x - e.deltaX,
+          y: panRef.current.y - e.deltaY,
+        });
       }
     }
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
+    // schedulePan only touches refs and stable state setters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onZoomChange]);
 
   useEffect(() => {
     return () => {
       cancelAnimationFrame(rafRef.current);
-      cancelAnimationFrame(ratioFlushRef.current);
       cancelMomentum();
-      cancelSpring();
+      cancelTween();
+      window.clearTimeout(highlightTimerRef.current);
     };
   }, []);
+
+  function handleDoubleClick(e) {
+    if (e.target.closest?.('[data-canvas-card]')) return;
+    const rect = viewportRef.current.getBoundingClientRect();
+    zoomAnchorRef.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+    onZoomChange(clampZoom(zoomRef.current * 1.35));
+  }
 
   return (
     <div
@@ -358,7 +403,15 @@ export function ImageCanvas({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      className="relative h-screen flex-1 overflow-hidden bg-surface-2"
+      onPointerCancel={onPointerUp}
+      onDoubleClick={handleDoubleClick}
+      onClickCapture={(e) => {
+        if (!suppressClickRef.current) return;
+        suppressClickRef.current = false;
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      className="canvas-surface absolute inset-0 overflow-hidden"
       style={{
         touchAction: 'none',
         cursor: dragging ? 'grabbing' : 'grab',
@@ -367,7 +420,8 @@ export function ImageCanvas({
       <div
         className="absolute left-0 top-0 origin-top-left"
         style={{
-          transform: `translate3d(${pan.x}px, ${pan.y}px, 0)`,
+          transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+          transformOrigin: '0 0',
           willChange: 'transform',
         }}
       >
@@ -378,9 +432,9 @@ export function ImageCanvas({
             image={imagesByKey.get(tile.imageKey)}
             selectionMode={selectionMode}
             selected={selectedIds.has(tile.imageKey)}
+            highlighted={focusedKey === tile.imageKey}
             onToggleSelect={onToggleSelect}
             onOpenLightbox={onOpenLightbox}
-            onImgLoad={onImgLoad}
           />
         ))}
       </div>
@@ -388,21 +442,8 @@ export function ImageCanvas({
   );
 }
 
-// Memoized so tiles don't re-render on pan/zoom — all props are primitives or
-// stable refs (useCallback handlers + stable image/tile objects).
-const CanvasTileWrapper = memo(function CanvasTileWrapper({
-  onImgLoad,
-  image,
-  ...rest
-}) {
-  // Wrapped so the aspect-ratio measurement does not change CanvasTile's signature.
-  return (
-    <div
-      onLoadCapture={(e) =>
-        e.target.tagName === 'IMG' && onImgLoad(e, image.imageKey)
-      }
-    >
-      <CanvasTile image={image} {...rest} />
-    </div>
-  );
+// Memoized so tiles don't re-render on pan/zoom — every prop is a primitive or
+// a stable handler/image/tile reference.
+const CanvasTileWrapper = memo(function CanvasTileWrapper({ image, ...rest }) {
+  return <CanvasTile image={image} {...rest} />;
 });

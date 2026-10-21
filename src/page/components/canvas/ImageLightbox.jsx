@@ -139,7 +139,7 @@ export function ImageLightbox({
             />
 
             {/* Right vertical action bar — sibling of the image, not overlapping */}
-            <div className="flex flex-col gap-2 rounded-full border border-line bg-white/70 p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl">
+            <div className="lightbox-actions flex flex-col gap-2 rounded-full border border-line bg-white/70 p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl">
               {/* Favori */}
               <button
                 type="button"

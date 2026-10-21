@@ -1,22 +1,45 @@
-import { ZoomIn } from 'lucide-react';
+import { LocateFixed, Minus, Plus } from 'lucide-react';
+import { clampZoom } from '../lib/canvasZoom.js';
 
-export function CanvasToolbar({ zoom, onZoomChange }) {
-  if (!onZoomChange) return null;
+const button =
+  'flex h-8 w-8 items-center justify-center rounded-full text-text transition-colors duration-[var(--dur-fast)] hover:bg-black/5';
+
+export function CanvasToolbar({ zoom, onZoomChange, onRecenter }) {
+  const percent = Math.round(zoom * 100);
   return (
-    <div className="fixed bottom-6 right-6 z-20 flex items-center gap-3 rounded-full border border-line bg-white/70 px-4 py-2 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
-      <label className="flex items-center gap-2 text-sm text-muted">
-        <ZoomIn size={15} />
-        <input
-          type="range"
-          min="0.2"
-          max="3"
-          step="0.1"
-          value={zoom}
-          onChange={(e) => onZoomChange(Number(e.target.value))}
-          aria-label="Yakınlaştır"
-        />
-        <span className="tabular-nums">×{zoom.toFixed(1)}</span>
-      </label>
+    <div className="fixed bottom-6 right-6 z-30 flex items-center gap-0.5 rounded-full border border-line/80 bg-white/80 p-1 pl-1.5 pr-1.5 text-text shadow-[0_1px_2px_rgba(28,27,24,0.04),0_14px_40px_-20px_rgba(28,27,24,0.4)] backdrop-blur-xl max-sm:bottom-24">
+      <button
+        type="button"
+        aria-label="Uzaklaştır"
+        className={button}
+        onClick={() => onZoomChange(clampZoom(zoom / 1.25))}
+      >
+        <Minus size={14} />
+      </button>
+      <span
+        aria-live="polite"
+        className="min-w-11 text-center text-[11.5px] font-medium tabular-nums"
+      >
+        {percent}%
+      </span>
+      <button
+        type="button"
+        aria-label="Yakınlaştır"
+        className={button}
+        onClick={() => onZoomChange(clampZoom(zoom * 1.25))}
+      >
+        <Plus size={14} />
+      </button>
+      <span className="mx-1 h-4 w-px bg-line" />
+      <button
+        type="button"
+        aria-label="Başlangıç görünümü"
+        title="Başlangıç görünümü"
+        className={button}
+        onClick={onRecenter}
+      >
+        <LocateFixed size={14} />
+      </button>
     </div>
   );
 }

@@ -47,9 +47,14 @@ describe('flattenImages', () => {
       imageKey: '100:0',
       tweetId: '100',
       mediaIndex: 0,
+      mediaCount: 2,
       url: 'https://pbs.twimg.com/a.jpg',
       authorHandle: 'alice',
       authorName: 'Alice',
+      authorAvatarUrl: null,
+      text: '',
+      likeCount: 0,
+      createdAt: null,
       tweetUrl: 'https://x.com/alice/status/100',
     });
   });

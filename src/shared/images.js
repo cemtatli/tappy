@@ -15,9 +15,14 @@ function toRecord(tweet, mediaIndex) {
     imageKey: imageKeyFor(tweet.id, mediaIndex),
     tweetId: tweet.id,
     mediaIndex,
+    mediaCount: tweet.mediaUrls.length,
     url: tweet.mediaUrls[mediaIndex],
     authorHandle: tweet.authorHandle,
     authorName: tweet.authorName,
+    authorAvatarUrl: tweet.avatarUrl ?? null,
+    text: tweet.text ?? '',
+    likeCount: tweet.stats?.likes ?? 0,
+    createdAt: tweet.createdAt ?? null,
     tweetUrl: tweet.tweetUrl,
   };
 }

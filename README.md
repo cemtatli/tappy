@@ -1,21 +1,21 @@
 # Tappy
 
-A Chrome (MV3) extension for browsing, organizing, and exporting your X (Twitter) bookmarks as cards or as a zoomable canvas. Image-first, fully local, light Apple-style UI.
+A Chrome (MV3) extension for browsing, organizing, and exporting your X (Twitter) bookmarks on an infinite, zoomable canvas. Image-first, fully local, warm and minimal UI.
 
 > Your bookmarks are read and stored entirely on your device, using your own browser session. No third-party server is involved.
 
-![Canvas view — a zoomable masonry wall of bookmarked images, with the sidebar showing sources and collections](docs/screenshots/canvas.webp)
+![Tappy — bookmarked images as cards on an infinite canvas](docs/screenshots/canvas.webp)
 
 ## Highlights
 
-- **Grid view** — virtualized tweet-card list; scales to thousands of records.
-- **Canvas view** — zoomable, pannable masonry wall of your bookmarked images (Eagle / thiings.co feel).
-- **View switch** — `Grid ⇄ Canvas` from the sidebar, or **G** / **C** on the keyboard.
+- **Infinite canvas** — free pan, pointer-anchored zoom, and an organic scatter layout. No pages, no bounds.
+- **Image-first cards** — knowspace-style white cards with tweet text, author, likes, and carousel badges for multi-image posts.
+- **Bottom dock** — search, a filter panel, and **Şaşırt beni** (surprise me), which flies to a random bookmark.
 - **Lightbox** — full-screen image growing out of the clicked tile, right-hand action bar, bottom strip for multi-image tweets, arrow-key navigation.
-- **Collections** — named collections (create / rename / delete), per-collection color, single and bulk add, plus a non-deletable `Favorites`.
-- **Search & sort** — search by text / author / handle; combine author, inclusive local publication-date range, image presence, and minimum likes filters across Grid and Canvas, including collections. Search applies to locally loaded records. Sort by newest, oldest, or most liked.
+- **Collections** — named collections (create / rename / delete), per-collection color, single and bulk add, plus a non-deletable `Favoriler`.
+- **Search & sort** — search by text / author / handle; combine author, inclusive local publication-date range, image presence, and minimum likes. Filters and sort apply to locally loaded records, and work inside collections.
 - **Export** — all or selected records as **JSON** / **CSV**; selected images as a single **ZIP** to drag into Figma; copy or download an individual image.
-- **Unmark** — remove a bookmark, one at a time or in bulk.
+- **Unmark** — remove a bookmark from the lightbox, or several at once from the selection bar.
 
 ## Install
 

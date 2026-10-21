@@ -2,12 +2,12 @@
 
 @theme {
   --color-base: #ffffff;
-  --color-surface: #f5f5f7;
-  --color-surface-2: #fbfbfd;
-  --color-line: #e5e5ea;
-  --color-accent: #0071e3;
-  --color-text: #1d1d1f;
-  --color-muted: #6e6e73;
+  --color-surface: #f4f1ea;
+  --color-surface-2: #f7f5f0;
+  --color-line: #e7e2d8;
+  --color-accent: #e8740c;
+  --color-text: #1c1b18;
+  --color-muted: #78736a;
   --color-danger: #ff3b30;
   --color-success: #34c759;
   --radius: 0.75rem;
@@ -21,6 +21,12 @@
   --dur-slow: 300ms;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   background-color: var(--color-base);
   color: var(--color-text);
@@ -29,6 +35,56 @@ body {
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+/* The world is endless; a barely-there dot grid gives the eye a sense of
+   movement without competing with the cards. */
+.canvas-surface {
+  background-color: var(--color-surface-2);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgb(28 27 24 / 0.035) 1px,
+    transparent 0
+  );
+  background-size: 26px 26px;
+}
+
+.canvas-card {
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
+  box-shadow:
+    0 1px 1px rgb(28 27 24 / 0.04),
+    0 10px 24px -16px rgb(28 27 24 / 0.3);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .canvas-card:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 2px 3px rgb(28 27 24 / 0.05),
+      0 22px 46px -22px rgb(28 27 24 / 0.45);
+  }
+}
+
+.canvas-card--focus {
+  border-color: rgb(232 116 12 / 0.55);
+  box-shadow:
+    0 0 0 3px rgb(232 116 12 / 0.2),
+    0 22px 52px -20px rgb(28 27 24 / 0.45);
+}
+
+/* The lightbox autofocuses its close button; keep that quiet, but give
+   keyboard users the app accent instead of the browser's blue ring. */
+.lightbox-actions :is(button, a):focus {
+  outline: none;
+}
+
+.lightbox-actions :is(button, a):focus-visible {
+  outline: 2px solid rgb(232 116 12 / 0.7);
+  outline-offset: 1px;
 }
 
 @keyframes banner-in {
@@ -107,6 +163,18 @@ body {
   }
   to {
     transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Same, but keeps the -50% x offset that centres the bar. */
+@keyframes bar-center-in {
+  from {
+    transform: translateX(-50%) translateY(12px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0) scale(1);
     opacity: 1;
   }
 }
@@ -208,6 +276,14 @@ body {
     }
   }
   @keyframes bar-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes bar-center-in {
     from {
       opacity: 0;
     }
