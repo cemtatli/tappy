@@ -1,4 +1,5 @@
 import { AlertDialog as BaseAlertDialog } from '@base-ui/react/alert-dialog';
+import { Button } from './Button.jsx';
 import { cn } from '../../lib/cn.js';
 
 export const AlertDialog = BaseAlertDialog.Root;
@@ -39,14 +40,10 @@ export function AlertDialogDescription({ className, ...props }) {
   );
 }
 
-export function AlertDialogClose({ className, ...props }) {
+export function AlertDialogClose({ className, variant = 'ghost', ...props }) {
   return (
-    <BaseAlertDialog.Close
-      className={cn(
-        'inline-flex h-9 items-center rounded-full px-4 text-sm font-bold hover:bg-black/5',
-        className
-      )}
-      {...props}
-    />
+    <Button variant={variant} size="sm" asChild className={className}>
+      <BaseAlertDialog.Close {...props} />
+    </Button>
   );
 }

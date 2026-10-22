@@ -14,6 +14,7 @@ import {
 import { EMPTY_FILTERS } from '../../shared/filters.js';
 import { FAVORITES_ID } from '../../shared/db.js';
 import { Input } from './ui/Input.jsx';
+import { Button } from './ui/Button.jsx';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -43,20 +44,15 @@ function SectionLabel({ children }) {
 
 function Pill({ active, className, children, ...props }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant={active ? 'default' : 'outline'}
+      size="sm"
       aria-pressed={active}
-      className={cn(
-        'flex h-9 items-center justify-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-[background-color,border-color,color] duration-[var(--dur-fast)] ease-[var(--ease-out)]',
-        active
-          ? 'border-text bg-text text-white'
-          : 'border-line bg-white text-text hover:bg-black/[0.04]',
-        className
-      )}
+      className={cn('h-9 w-full px-3 text-[12px]', className)}
       {...props}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -164,22 +160,23 @@ export function FilterPanel({
             </p>
           </div>
           <div className="flex items-center gap-1">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onReset}
               disabled={!hasFilters}
-              className="rounded-full px-2 py-1 text-[11px] font-medium text-accent transition-colors hover:bg-accent/5 disabled:opacity-40"
             >
               Temizle
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               aria-label="Filtreleri kapat"
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-black/5 hover:text-text"
+              className="size-8 min-w-8 px-0"
             >
               <X size={16} />
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -207,17 +204,18 @@ export function FilterPanel({
 
         <div className="mb-2 mt-5 flex items-center justify-between">
           <SectionLabel>Koleksiyonlar</SectionLabel>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             aria-label="Yeni koleksiyon"
             onClick={() => {
               setSelectedColor(DEFAULT_COLLECTION_COLOR);
               setCreating(true);
             }}
-            className="-mt-2 flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-black/5 hover:text-text"
+            className="-mt-2 size-7 min-w-7 px-0"
           >
             <Plus size={15} />
-          </button>
+          </Button>
         </div>
 
         {creating && (
@@ -234,7 +232,7 @@ export function FilterPanel({
               }}
               onBlur={submitNew}
               variant="subtle"
-              className="mb-1 w-full bg-white"
+              className="mb-1 w-full"
             />
             <ColorDots value={selectedColor} onChange={setSelectedColor} />
           </div>
@@ -362,7 +360,7 @@ export function FilterPanel({
               placeholder="Ad veya @kullanıcı"
               value={filters.author ?? ''}
               onChange={(e) => onChange('author', e.target.value)}
-              className="mt-1 min-h-10 w-full bg-white"
+              className="mt-1 min-h-10 w-full"
             />
           </label>
           <div className="space-y-2">
@@ -375,7 +373,7 @@ export function FilterPanel({
                   value={filters.dateFrom ?? ''}
                   onChange={(e) => onChange('dateFrom', e.target.value)}
                   aria-invalid={Boolean(invalidRange)}
-                  className="mt-1 min-h-10 w-full min-w-0 bg-white"
+                  className="mt-1 min-h-10 w-full min-w-0"
                 />
               </label>
               <label className="block text-[11px] text-muted">
@@ -386,7 +384,7 @@ export function FilterPanel({
                   value={filters.dateTo ?? ''}
                   onChange={(e) => onChange('dateTo', e.target.value)}
                   aria-invalid={Boolean(invalidRange)}
-                  className="mt-1 min-h-10 w-full min-w-0 bg-white"
+                  className="mt-1 min-h-10 w-full min-w-0"
                 />
               </label>
             </div>
@@ -407,10 +405,10 @@ export function FilterPanel({
                 <label
                   key={value}
                   className={cn(
-                    'flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-[11.5px] transition-colors',
+                    'flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-[11.5px] backdrop-blur-xl transition-[background-color,border-color,color] duration-[var(--dur-fast)]',
                     (filters.media ?? 'all') === value
-                      ? 'border-text bg-text text-white'
-                      : 'border-line bg-white text-text hover:bg-black/[0.04]'
+                      ? 'border-transparent bg-accent text-white shadow-[0_2px_6px_rgba(232,116,12,0.28)]'
+                      : 'border-[color:var(--lg-border)] bg-[var(--lg-control-surface)] text-text hover:bg-[var(--lg-control-surface-hover)]'
                   )}
                 >
                   <input
@@ -436,29 +434,29 @@ export function FilterPanel({
               placeholder="Sınır yok"
               value={filters.minLikes ?? ''}
               onChange={(e) => onChange('minLikes', e.target.value)}
-              className="mt-1 min-h-10 w-full bg-white"
+              className="mt-1 min-h-10 w-full"
             />
           </label>
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-2 border-t border-line/80 pt-2">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onLoadOlder}
             disabled={loadingOlder}
-            className="flex items-center gap-1.5 rounded-full px-2 py-1.5 text-[11.5px] font-medium text-muted transition-colors hover:bg-black/[0.04] hover:text-text disabled:opacity-50"
           >
             <History size={13} />
             {loadingOlder ? 'Yükleniyor…' : 'Daha eski kayıtlar'}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             disabled={!hasFilters}
             onClick={onReset}
-            className="rounded-full px-2.5 py-1.5 text-[11.5px] font-medium text-accent transition-colors hover:bg-accent/5 disabled:opacity-40"
           >
             Filtreleri temizle
-          </button>
+          </Button>
         </div>
         <p className="mt-1 px-2 text-[10.5px] tabular-nums text-muted">
           {resultCount} görsel · X bookmark’larından

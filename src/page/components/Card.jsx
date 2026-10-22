@@ -2,6 +2,7 @@ import { ExternalLink, Download, PanelRight, Trash2 } from 'lucide-react';
 import { Avatar } from './Avatar.jsx';
 import { StatsRow } from './StatsRow.jsx';
 import { Checkbox } from './ui/Checkbox.jsx';
+import { Button } from './ui/Button.jsx';
 import { QuotedTweet } from './QuotedTweet.jsx';
 import { MediaGrid } from './MediaGrid.jsx';
 
@@ -54,40 +55,44 @@ export function Card({
           <span className="flex-1" />
           {showActions && (
             <div className="flex items-center text-muted">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label="Export"
                 onClick={() => onExportOne?.(tweet.id)}
-                className="rounded-full p-2 transition-colors hover:bg-black/5 hover:text-text"
+                className="size-8 min-w-8 px-0 text-muted hover:text-text"
               >
                 <Download size={16} />
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label="Unmark"
                 onClick={() => onUnmarkOne?.(tweet.id)}
-                className="rounded-full p-2 transition-colors hover:bg-black/5 hover:text-danger"
+                className="size-8 min-w-8 px-0 text-muted hover:text-danger"
               >
                 <Trash2 size={16} />
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label="Önizle"
                 onClick={() => onPreview?.(tweet.id)}
-                className="rounded-full p-2 transition-colors hover:bg-black/5 hover:text-accent"
+                className="size-8 min-w-8 px-0 text-muted hover:text-accent"
               >
                 <PanelRight size={16} />
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label="X'te aç"
                 onClick={() =>
                   window.open(tweet.tweetUrl, '_blank', 'noopener,noreferrer')
                 }
-                className="rounded-full p-2 transition-colors hover:bg-black/5 hover:text-accent"
+                className="size-8 min-w-8 px-0 text-muted hover:text-accent"
               >
                 <ExternalLink size={16} />
-              </button>
+              </Button>
             </div>
           )}
         </div>

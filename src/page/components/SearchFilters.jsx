@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { EMPTY_FILTERS } from '../../shared/filters.js';
 import { Input } from './ui/Input.jsx';
+import { Button } from './ui/Button.jsx';
 import { cn } from '../lib/cn.js';
 
 export function SearchFilters({
@@ -25,12 +26,13 @@ export function SearchFilters({
 
   return (
     <div className="mb-3">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         aria-expanded={open}
         aria-controls={`${id}-panel`}
         onClick={() => setOpen((value) => !value)}
-        className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 text-[13px] text-muted transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-accent"
+        className="min-h-10 w-full justify-start gap-2 rounded-lg px-2.5 text-[13px] font-normal text-muted [&_.lg-button__label]:w-full"
       >
         <SlidersHorizontal size={15} />
         <span className="flex-1 text-left">Gelişmiş arama</span>
@@ -43,7 +45,7 @@ export function SearchFilters({
           size={14}
           className={cn('transition-transform', open && 'rotate-180')}
         />
-      </button>
+      </Button>
       {open && (
         <div
           id={`${id}-panel`}
@@ -145,14 +147,15 @@ export function SearchFilters({
             <span role="status" className="text-xs tabular-nums text-muted">
               {resultCount} {resultLabel}
             </span>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               disabled={!hasFilters}
               onClick={onReset}
-              className="min-h-10 rounded-lg px-2 text-xs text-accent hover:bg-accent/5 focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-40"
+              className="min-h-10 px-2 text-xs text-accent"
             >
               Aramayı temizle
-            </button>
+            </Button>
           </div>
           <p className="text-[11px] leading-relaxed text-muted">
             Yüklü kayıtlarda arama yapılır.

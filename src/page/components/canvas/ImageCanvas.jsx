@@ -6,13 +6,19 @@ import {
   useRef,
   useState,
 } from 'react';
-import { layoutScatter, visibleTiles } from '../../lib/canvasLayout.js';
+import {
+  createTileIndex,
+  layoutScatter,
+  visibleTilesFromIndex,
+} from '../../lib/canvasLayout.js';
 import { clampZoom } from '../../lib/canvasZoom.js';
 import { CanvasTile } from './CanvasTile.jsx';
 
 const DRAG_THRESHOLD = 5;
 const MOMENTUM_DECAY = 0.92;
-const OVERSCAN = 320;
+// Mount a little beyond the viewport so momentum never exposes empty space,
+// expressed in screen pixels so the margin feels the same at every zoom.
+const OVERSCAN_PX = 360;
 const HIGHLIGHT_MS = 3200;
 
 const prefersReducedMotion = () =>
@@ -22,21 +28,10 @@ const prefersReducedMotion = () =>
 const easeInOutCubic = (t) =>
   t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 
-// The first few cards form the landing cluster: centre it, but leave the
-// margins airy enough that cards at the edge invite panning.
-function homePan(layout, size, zoom) {
-  const sample = layout.tiles.slice(0, Math.min(4, layout.tiles.length));
-  if (sample.length === 0) {
-    return { x: size.width / 2, y: size.height / 2 };
-  }
-  const minX = Math.min(...sample.map((tile) => tile.x));
-  const maxX = Math.max(...sample.map((tile) => tile.x + tile.w));
-  const minY = Math.min(...sample.map((tile) => tile.y));
-  const maxY = Math.max(...sample.map((tile) => tile.y + tile.h));
-  return {
-    x: size.width / 2 - ((minX + maxX) / 2) * zoom,
-    y: size.height / 2 - ((minY + maxY) / 2) * zoom,
-  };
+// The scatter layout is centred on the origin: the newest row straddles it and
+// later rows alternate above/below while every row is centred horizontally.
+function homePan(size) {
+  return { x: size.width / 2, y: size.height / 2 };
 }
 
 function tilePan(tile, size, zoom) {
@@ -172,7 +167,7 @@ export function ImageCanvas({
     if (didInitRef.current) return;
     if (!layout.tiles.length || size.width < 2) return;
     didInitRef.current = true;
-    commitPan(homePan(layout, size, zoomRef.current));
+    commitPan(homePan(size));
   }, [layout, size]);
 
   useEffect(() => {
@@ -182,7 +177,7 @@ export function ImageCanvas({
     cancelTween();
     setFocusedKey(null);
     if (layout.tiles.length > 0) {
-      commitPan(homePan(layout, size, zoomRef.current));
+      commitPan(homePan(size));
     }
   }, [viewKey, layout, size]);
 
@@ -225,7 +220,7 @@ export function ImageCanvas({
         skipAnchorRef.current = true;
         onZoomChange(targetZoom);
       }
-      animatePanTo(homePan(layout, size, targetZoom), 680);
+      animatePanTo(homePan(size), 680);
       return;
     }
 
@@ -253,18 +248,17 @@ export function ImageCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRequest, layout, size, zoom, onZoomChange]);
 
-  const inverseZoom = 1 / zoom;
-  const viewportWorld = {
-    x: -pan.x * inverseZoom - OVERSCAN,
-    y: -pan.y * inverseZoom - OVERSCAN,
-    width: size.width * inverseZoom + OVERSCAN * 2,
-    height: size.height * inverseZoom + OVERSCAN * 2,
-  };
-  const shown = useMemo(
-    () => visibleTiles(layout.tiles, viewportWorld),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [layout, pan.x, pan.y, size.width, size.height, zoom]
-  );
+  const tileIndex = useMemo(() => createTileIndex(layout.tiles), [layout]);
+  const shown = useMemo(() => {
+    const inverseZoom = 1 / zoom;
+    const overscan = OVERSCAN_PX * inverseZoom;
+    return visibleTilesFromIndex(tileIndex, {
+      x: -pan.x * inverseZoom - overscan,
+      y: -pan.y * inverseZoom - overscan,
+      width: size.width * inverseZoom + overscan * 2,
+      height: size.height * inverseZoom + overscan * 2,
+    });
+  }, [tileIndex, pan.x, pan.y, size.width, size.height, zoom]);
 
   function startMomentum(initialVelocity) {
     cancelMomentum();

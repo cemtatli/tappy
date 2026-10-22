@@ -1,0 +1,24 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/page/app.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "src/page/components",
+    "utils": "src/page/lib/cn",
+    "ui": "src/page/components/ui",
+    "lib": "src/page/lib",
+    "hooks": "src/page/lib"
+  },
+  "iconLibrary": "lucide",
+  "registries": {
+    "@glassyui": "https://glassyui.com/r/{name}.json"
+  }
+}

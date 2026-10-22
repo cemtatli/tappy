@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Copy, ImageDown } from 'lucide-react';
 import { cn } from '../lib/cn.js';
+import { Button } from './ui/Button.jsx';
 import {
   copyImageToClipboard,
   displayUrl,
@@ -51,8 +52,7 @@ export function MediaGrid({ tweet, onStatus }) {
     }
   }
 
-  const buttonClass =
-    'rounded-full bg-white/80 p-2 text-text backdrop-blur border border-line transition-colors hover:bg-white hover:text-accent';
+  const buttonClass = 'size-8 min-w-8 px-0';
 
   return (
     <div
@@ -65,22 +65,24 @@ export function MediaGrid({ tweet, onStatus }) {
         <div key={url} className="group/media relative h-full">
           <MediaImg url={url} alt={`${tweet.authorName} tweet medyası`} />
           <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover/media:opacity-100">
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               aria-label="Görseli panoya kopyala"
               onClick={() => handleCopy(url)}
               className={buttonClass}
             >
               <Copy size={14} />
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               aria-label="Görseli indir"
               onClick={() => handleDownload(url, index)}
               className={buttonClass}
             >
               <ImageDown size={14} />
-            </button>
+            </Button>
           </div>
         </div>
       ))}

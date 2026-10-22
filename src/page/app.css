@@ -21,6 +21,37 @@
   --dur-slow: 300ms;
 }
 
+/* Tappy's orange on Glassy UI's prominent / accent tokens. */
+html[data-lg-theme='light'] {
+  --lg-accent: #e8740c;
+  --lg-prominent-fill: #e8740c;
+  --lg-prominent-glow: 255 196 140;
+  --lg-prominent-shade: 92 38 4;
+  --lg-prominent-tint: grayscale(1) contrast(0.4) brightness(0.9) sepia(1)
+    hue-rotate(-15deg) saturate(7);
+  --lg-switch-on: #e8740c;
+  --lg-focus-ring: #e8740c;
+}
+
+/* Compact Tappy sizing. These live below Tailwind utilities so callers can
+   keep overriding padding, height and radius with classes. */
+@layer components {
+  .lg-input.lg-input--compact {
+    padding: 0.5rem 0.9rem;
+    font-size: 13.5px;
+    border-radius: 14px;
+  }
+
+  /* Destructive keeps the prominent glass treatment, recoloured red. */
+  .lg-button--destructive {
+    --lg-prominent-fill: #ff3b30;
+    --lg-prominent-glow: 255 168 160;
+    --lg-prominent-shade: 92 10 8;
+    --lg-prominent-tint: grayscale(1) contrast(0.45) brightness(0.4) sepia(1)
+      hue-rotate(-8deg) saturate(6) brightness(1.1);
+  }
+}
+
 html,
 body,
 #root {

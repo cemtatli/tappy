@@ -12,7 +12,9 @@ describe('Button', () => {
 
   it('applies variant classes', () => {
     render(<Button variant="destructive">Sil</Button>);
-    expect(screen.getByRole('button').className).toContain('bg-danger');
+    expect(screen.getByRole('button').className).toContain(
+      'lg-button--prominent'
+    );
   });
 
   it('merges extra className', () => {

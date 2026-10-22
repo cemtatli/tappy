@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { cn } from '../lib/cn.js';
+import { Button } from './ui/Button.jsx';
 
 // Keep in sync with the w-[420px] classes below: Tailwind cannot read a JS
 // constant, so the value has to be written twice.
@@ -56,23 +57,30 @@ export function PreviewPanel({ tweet, onClose, overlay = false }) {
         <div className="flex h-full w-[420px] flex-col">
           <div className="flex items-center gap-1 border-b border-line px-4 py-2">
             <h2 className="flex-1 text-[15px] font-bold">Önizleme</h2>
-            <a
-              href={tweet.tweetUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="X'te aç"
-              className="rounded-full p-2 text-muted transition-colors hover:bg-black/5 hover:text-accent"
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="size-8 min-w-8 px-0 text-muted hover:text-accent"
             >
-              <ExternalLink size={16} />
-            </a>
-            <button
-              type="button"
+              <a
+                href={tweet.tweetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="X'te aç"
+              >
+                <ExternalLink size={16} />
+              </a>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               aria-label="Önizlemeyi kapat"
               onClick={onClose}
-              className="rounded-full p-2 text-muted transition-colors hover:bg-black/5 hover:text-text"
+              className="size-8 min-w-8 px-0 text-muted hover:text-text"
             >
               <X size={16} />
-            </button>
+            </Button>
           </div>
           <div className="flex-1 overflow-y-auto p-3">
             <iframe

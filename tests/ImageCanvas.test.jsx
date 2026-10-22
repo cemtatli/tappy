@@ -33,4 +33,27 @@ describe('ImageCanvas', () => {
     const imgs = document.querySelectorAll('img');
     expect(imgs.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('mounts only the cards near the viewport', () => {
+    const many = Array.from({ length: 240 }, (_, index) => ({
+      imageKey: `canvas:${index}`,
+      url: `https://pbs.twimg.com/${index}.jpg`,
+      authorHandle: `user${index}`,
+      tweetUrl: `https://x.com/user${index}/status/${index}`,
+      text: `Bookmark ${index}`,
+    }));
+    render(
+      <ImageCanvas
+        images={many}
+        zoom={1}
+        onZoomChange={vi.fn()}
+        selectionMode={false}
+        selectedIds={new Set()}
+        onToggleSelect={vi.fn()}
+      />
+    );
+    const mounted = document.querySelectorAll('[data-canvas-card]');
+    expect(mounted.length).toBeGreaterThan(0);
+    expect(mounted.length).toBeLessThan(many.length);
+  });
 });

@@ -10,6 +10,22 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   };
 }
 
+// jsdom matchMedia'yi desteklemez; Glassy UI preference sorguları istiyor.
+if (typeof window !== 'undefined' && typeof window.matchMedia === 'undefined') {
+  window.matchMedia = (query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    dispatchEvent() {
+      return false;
+    },
+  });
+}
+
 // Base UI Checkbox jsdom'da PointerEvent ister; stub yeterli.
 if (typeof globalThis.PointerEvent === 'undefined') {
   const BaseClass = typeof MouseEvent !== 'undefined' ? MouseEvent : Event;

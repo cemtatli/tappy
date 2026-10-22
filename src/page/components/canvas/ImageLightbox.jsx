@@ -14,6 +14,9 @@ import {
   downloadImage,
   extFromUrl,
 } from '../../lib/media.js';
+import { Button } from '../ui/Button.jsx';
+
+const actionButton = 'size-8 min-w-8 px-0';
 
 // Must match the lightbox-out keyframe duration (--dur-base) in app.css.
 const EXIT_MS = 200;
@@ -140,45 +143,45 @@ export function ImageLightbox({
 
             {/* Right vertical action bar — sibling of the image, not overlapping */}
             <div className="lightbox-actions flex flex-col gap-2 rounded-full border border-line bg-white/70 p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl">
-              {/* Favori */}
-              <button
-                type="button"
+              <Button
+                variant={isFavorited ? 'default' : 'ghost'}
+                size="sm"
                 aria-label="Favori"
                 title="Favori"
                 onClick={() => onToggleFavorite?.(active)}
-                className={`rounded-full p-1.5 hover:bg-black/5 ${isFavorited ? 'text-danger' : ''}`}
+                className={actionButton}
               >
                 <Heart
                   size={16}
                   className={isFavorited ? 'fill-current' : ''}
                 />
-              </button>
+              </Button>
 
-              {/* Koleksiyona ekle */}
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label="Koleksiyona ekle"
                 title="Koleksiyona ekle"
                 onClick={() => onAddToCollection?.(active)}
-                className="rounded-full p-1.5 hover:bg-black/5"
+                className={actionButton}
               >
                 <FolderPlus size={16} />
-              </button>
+              </Button>
 
-              {/* Kopyala */}
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label="Kopyala"
                 title="Kopyala"
                 onClick={() => copyImageToClipboard(active.url)}
-                className="rounded-full p-1.5 hover:bg-black/5"
+                className={actionButton}
               >
                 <Copy size={16} />
-              </button>
+              </Button>
 
-              {/* İndir */}
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label="İndir"
                 title="İndir"
                 onClick={() =>
@@ -187,56 +190,61 @@ export function ImageLightbox({
                     `${active.authorHandle}-${active.tweetId}-${active.mediaIndex}.${extFromUrl(active.url)}`
                   )
                 }
-                className="rounded-full p-1.5 hover:bg-black/5"
+                className={actionButton}
               >
                 <Download size={16} />
-              </button>
+              </Button>
 
-              {/* Unmark */}
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label="Unmark"
                 title="Unmark"
                 onClick={() => onUnmark?.(active.tweetId)}
-                className="rounded-full p-1.5 text-danger hover:bg-black/5"
+                className={`${actionButton} text-danger`}
               >
                 <Trash2 size={16} />
-              </button>
+              </Button>
 
-              {/* Önizleme */}
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label="Önizleme"
                 title="Önizleme"
                 onClick={() => onPreview?.(active)}
-                className="rounded-full p-1.5 hover:bg-black/5"
+                className={actionButton}
               >
                 <PanelRight size={16} />
-              </button>
+              </Button>
 
-              {/* Tweet'i aç */}
-              <a
-                href={active.tweetUrl}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Tweet'i aç"
-                title="Tweet'i aç"
-                className="rounded-full p-1.5 hover:bg-black/5"
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className={actionButton}
               >
-                <ExternalLink size={16} />
-              </a>
+                <a
+                  href={active.tweetUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Tweet'i aç"
+                  title="Tweet'i aç"
+                >
+                  <ExternalLink size={16} />
+                </a>
+              </Button>
 
-              {/* Kapat */}
-              <button
+              <Button
                 ref={closeRef}
-                type="button"
+                variant="ghost"
+                size="sm"
                 aria-label="Kapat"
                 title="Kapat"
                 onClick={startClose}
-                className="rounded-full p-1.5 hover:bg-black/5"
+                className={actionButton}
               >
                 <X size={16} />
-              </button>
+              </Button>
             </div>
           </div>
 

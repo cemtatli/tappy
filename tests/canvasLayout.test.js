@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { layoutMasonry, visibleTiles } from '../src/page/lib/canvasLayout.js';
+import {
+  createTileIndex,
+  layoutMasonry,
+  layoutScatter,
+  visibleTiles,
+  visibleTilesFromIndex,
+} from '../src/page/lib/canvasLayout.js';
 
 const imgs = [
   { imageKey: 'a' },
@@ -58,5 +64,81 @@ describe('visibleTiles', () => {
     ];
     const vis = visibleTiles(tiles, { x: 0, y: 0, width: 200, height: 200 });
     expect(vis.map((t) => t.imageKey)).toEqual(['a']);
+  });
+});
+
+describe('layoutScatter', () => {
+  it('centres a lone card on the origin', () => {
+    const layout = layoutScatter([
+      { imageKey: 'solo', text: 'tek', authorName: 'cem' },
+    ]);
+    expect(layout.tiles).toHaveLength(1);
+    const [tile] = layout.tiles;
+    expect(Math.abs(tile.x + tile.w / 2)).toBeLessThanOrEqual(1);
+    expect(Math.abs(tile.y + tile.h / 2)).toBeLessThanOrEqual(1);
+    expect(layout.worldWidth).toBe(tile.w);
+    expect(layout.worldHeight).toBe(tile.h);
+  });
+
+  it('grows in all four directions from the newest row', () => {
+    const images = Array.from({ length: 120 }, (_, index) => ({
+      imageKey: `image-${index}`,
+      text: `Bookmark ${index} ${'metin '.repeat(index % 7)}`,
+      authorName: `user${index}`,
+    }));
+    const layout = layoutScatter(images);
+    expect(layout.tiles).toHaveLength(images.length);
+    expect(layout.tiles.some((tile) => tile.x < 0)).toBe(true);
+    expect(layout.tiles.some((tile) => tile.x > 0)).toBe(true);
+    expect(layout.tiles.some((tile) => tile.y < 0)).toBe(true);
+    expect(layout.tiles.some((tile) => tile.y > 0)).toBe(true);
+    expect(layout.minX).toBeLessThan(0);
+    expect(layout.minY).toBeLessThan(0);
+    expect(layout.maxX).toBeGreaterThan(0);
+    expect(layout.maxY).toBeGreaterThan(0);
+  });
+});
+
+describe('createTileIndex', () => {
+  const tiles = [
+    { imageKey: 'a', x: -620, y: -620, w: 100, h: 100 },
+    { imageKey: 'b', x: 20, y: 20, w: 100, h: 100 },
+    { imageKey: 'c', x: 1200, y: 1200, w: 100, h: 100 },
+  ];
+
+  it('returns only tiles intersecting the viewport', () => {
+    const index = createTileIndex(tiles, 512);
+    const vis = visibleTilesFromIndex(index, {
+      x: -700,
+      y: -700,
+      width: 300,
+      height: 300,
+    });
+    expect(vis.map((tile) => tile.imageKey)).toEqual(['a']);
+  });
+
+  it('dedupes a tile that spans multiple cells', () => {
+    const index = createTileIndex(
+      [{ imageKey: 'big', x: -300, y: -300, w: 900, h: 900 }],
+      128
+    );
+    const vis = visibleTilesFromIndex(index, {
+      x: -350,
+      y: -350,
+      width: 1000,
+      height: 1000,
+    });
+    expect(vis.map((tile) => tile.imageKey)).toEqual(['big']);
+  });
+
+  it('keeps layout order for a wide viewport', () => {
+    const index = createTileIndex(tiles, 128);
+    const vis = visibleTilesFromIndex(index, {
+      x: -700,
+      y: -700,
+      width: 2200,
+      height: 2200,
+    });
+    expect(vis.map((tile) => tile.imageKey)).toEqual(['a', 'b', 'c']);
   });
 });

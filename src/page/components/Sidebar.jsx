@@ -19,6 +19,7 @@ import { FAVORITES_ID } from '../../shared/db.js';
 import tappyMark from '../../assets/icons/tappy-mark.svg';
 import { cn } from '../lib/cn.js';
 import { Input } from './ui/Input.jsx';
+import { Button } from './ui/Button.jsx';
 import { SearchFilters } from './SearchFilters.jsx';
 import { Segmented } from './ui/Segmented.jsx';
 import {
@@ -78,7 +79,7 @@ function Row({ active, icon: Icon, dotColor, label, count, onClick, menu }) {
 }
 
 const FOOTER_ACTION =
-  'flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-[13px] tracking-[0.01em] text-muted transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-black/5 hover:text-text';
+  'h-8 w-full justify-start gap-2.5 rounded-lg px-2.5 text-[13px] font-normal tracking-[0.01em] text-muted hover:text-text';
 
 export function Sidebar({
   source,
@@ -214,17 +215,18 @@ export function Sidebar({
           <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
             Koleksiyonlar
           </span>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             aria-label="Yeni koleksiyon"
             onClick={() => {
               setSelectedColor(DEFAULT_COLLECTION_COLOR);
               setCreating(true);
             }}
-            className="text-muted hover:text-text"
+            className="size-7 min-w-7 px-0"
           >
             <Plus size={15} />
-          </button>
+          </Button>
         </div>
 
         {creating && (
@@ -342,26 +344,33 @@ export function Sidebar({
       </div>
 
       <div className="mt-3 border-t border-line pt-2">
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onToggleSelectionMode}
-          className={FOOTER_ACTION}
+          className={cn(FOOTER_ACTION, 'justify-start')}
         >
           <CheckSquare size={15} className="shrink-0" />
           {selectionMode ? 'Seçimi bitir' : 'Seç'}
-        </button>
-        <button type="button" onClick={onExportAll} className={FOOTER_ACTION}>
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onExportAll}
+          className={cn(FOOTER_ACTION, 'justify-start')}
+        >
           <Download size={15} className="shrink-0" />
           Tümünü export et
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onOpenSettings}
-          className={FOOTER_ACTION}
+          className={cn(FOOTER_ACTION, 'justify-start')}
         >
           <Settings size={15} className="shrink-0" />
           Ayarlar
-        </button>
+        </Button>
       </div>
     </aside>
   );

@@ -53,6 +53,7 @@ import {
   AlertDialogDescription,
   AlertDialogClose,
 } from './components/ui/AlertDialog.jsx';
+import { Button } from './components/ui/Button.jsx';
 
 function downloadFile(filename, content, mimeType) {
   const blob = new Blob([content], { type: mimeType });
@@ -686,16 +687,17 @@ export function App() {
               {emptyCopy}
             </p>
             {hasActiveFilters && (
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   setFilters({ ...EMPTY_FILTERS });
                   setSource('all');
                 }}
-                className="pointer-events-auto mt-5 rounded-full border border-line bg-white px-4 py-2 text-[12px] font-medium text-text transition-colors hover:bg-black/[0.03]"
+                className="pointer-events-auto mt-5"
               >
                 Filtreleri temizle
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -783,7 +785,7 @@ export function App() {
           <div className="mt-6 flex justify-end gap-2">
             <AlertDialogClose>Vazgeç</AlertDialogClose>
             <AlertDialogClose
-              className="bg-danger text-white hover:bg-danger/90"
+              variant="destructive"
               onClick={() => {
                 const ids = unmarkConfirm?.ids ?? [];
                 setUnmarkConfirm(null);

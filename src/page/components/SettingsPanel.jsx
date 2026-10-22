@@ -17,16 +17,17 @@ function InfoHint({ label, children }) {
   const [open, setOpen] = useState(false);
   return (
     <span className="relative inline-flex">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         aria-label={label}
         title={label}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="text-muted hover:text-text"
+        className="size-6 min-w-6 px-0 text-muted hover:text-text"
       >
         <Info size={13} />
-      </button>
+      </Button>
       {open && (
         <>
           <span
@@ -46,19 +47,20 @@ function InfoHint({ label, children }) {
 function Disclosure({ id, title, open, onToggle, children }) {
   return (
     <section className="border-t border-line">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         aria-expanded={open}
         aria-controls={id}
         onClick={onToggle}
-        className="flex w-full items-center gap-1.5 py-3 text-sm font-semibold text-text"
+        className="w-full justify-start gap-1.5 rounded-lg px-0 py-3 text-sm font-semibold"
       >
         <ChevronRight
           size={14}
           className={`text-muted transition-transform duration-[var(--dur-fast)] ${open ? 'rotate-90' : ''}`}
         />
         {title}
-      </button>
+      </Button>
       {open && (
         <div id={id} className="pb-4">
           {children}
@@ -226,14 +228,15 @@ export function SettingsPanel({ open, onClose }) {
       <div className="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius)] border border-line bg-white p-6 text-text shadow-[0_8px_30px_rgba(0,0,0,0.12)] animate-[settings-in_var(--dur-base)_var(--ease-out)]">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-text">Ayarlar</h2>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             aria-label="Kapat"
             onClick={onClose}
-            className="text-muted hover:text-text"
+            className="size-9 min-w-9 px-0"
           >
             <X size={18} />
-          </button>
+          </Button>
         </div>
 
         <ConnectionCard

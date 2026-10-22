@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react';
+import { Button } from './ui/Button.jsx';
 
 export function AddToCollectionMenu({
   open,
@@ -21,17 +22,18 @@ export function AddToCollectionMenu({
         {collections.map((c) => {
           const checked = memberOf.has(c.id);
           return (
-            <button
+            <Button
               key={c.id}
-              type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => onToggle(c.id, !checked)}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-text hover:bg-black/5"
+              className="w-full justify-start rounded-lg px-2 py-1.5 text-left text-sm [&_.lg-button__label]:w-full"
             >
               <span className="flex h-4 w-4 items-center justify-center">
                 {checked && <Check size={14} />}
               </span>
               <span className="min-w-0 flex-1 truncate">{c.name}</span>
-            </button>
+            </Button>
           );
         })}
       </div>

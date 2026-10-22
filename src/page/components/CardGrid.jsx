@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronsUp, ChevronsDown } from 'lucide-react';
 import { Card } from './Card.jsx';
+import { Button } from './ui/Button.jsx';
 import { cn } from '../lib/cn.js';
 
 const ESTIMATE_SIZE = 180;
@@ -51,8 +52,7 @@ export function CardGrid({
     rowVirtualizer.scrollToIndex(tweets.length - 1, { align: 'end' });
   }
 
-  const jumpButtonClass =
-    'rounded-full border border-line bg-white/70 p-2.5 text-text backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-colors hover:bg-white hover:text-text';
+  const jumpButtonClass = 'size-10 min-w-10 px-0';
 
   return (
     <div className="relative w-full max-w-[600px]">
@@ -104,22 +104,24 @@ export function CardGrid({
       </div>
       {tweets.length > 0 && (
         <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="sm"
             aria-label="En üste git"
             onClick={scrollToTop}
             className={jumpButtonClass}
           >
             <ChevronsUp size={18} />
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             aria-label="En alta git"
             onClick={scrollToBottom}
             className={jumpButtonClass}
           >
             <ChevronsDown size={18} />
-          </button>
+          </Button>
         </div>
       )}
     </div>

@@ -1,25 +1,21 @@
 import { CheckSquare, Download, Settings } from 'lucide-react';
 import tappyMark from '../../assets/icons/tappy-mark.svg';
+import { Button } from './ui/Button.jsx';
 import { cn } from '../lib/cn.js';
 
 function IconButton({ label, active, className, children, ...props }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant={active ? 'default' : 'outline'}
+      size="sm"
       aria-label={label}
       title={label}
       aria-pressed={active}
-      className={cn(
-        'flex h-10 w-10 items-center justify-center rounded-full border shadow-[0_1px_2px_rgba(28,27,24,0.04),0_10px_30px_-18px_rgba(28,27,24,0.35)] backdrop-blur-xl transition-[background-color,color,transform] duration-[var(--dur-fast)] ease-[var(--ease-out)] active:scale-95',
-        active
-          ? 'border-text bg-text text-white hover:bg-black'
-          : 'border-line/80 bg-white/80 text-text hover:bg-white',
-        className
-      )}
+      className={cn('size-10 min-w-10 px-0', className)}
       {...props}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -38,9 +34,9 @@ export function CanvasHeader({
         type="button"
         onClick={onHome}
         title="Başlangıç görünümü"
-        className="pointer-events-auto flex h-11 items-center gap-2 rounded-full border border-line/80 bg-white/80 py-1 pl-1 pr-4 shadow-[0_1px_2px_rgba(28,27,24,0.04),0_10px_30px_-18px_rgba(28,27,24,0.35)] backdrop-blur-xl transition-colors hover:bg-white"
+        className="pointer-events-auto flex h-11 items-center gap-2 rounded-full px-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-75 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
       >
-        <img src={tappyMark} alt="" className="h-9 w-9 rounded-[10px]" />
+        <img src={tappyMark} alt="" className="h-9 w-9" />
         <span className="text-[15px] font-semibold tracking-[-0.01em] text-text">
           Tappy
         </span>
