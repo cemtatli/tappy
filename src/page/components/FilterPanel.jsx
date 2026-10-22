@@ -22,11 +22,15 @@ import {
   DropdownMenuItem,
 } from './ui/DropdownMenu.jsx';
 import { cn } from '../lib/cn.js';
+import { useExitPresence } from '../lib/usePresence.js';
 import {
   COLLECTION_COLORS,
   DEFAULT_COLLECTION_COLOR,
   COLLECTION_COLOR_NAMES,
 } from '../lib/collectionColors.js';
+
+// Matches --dur-exit in app.css.
+const EXIT_MS = 160;
 
 const SORT_OPTIONS = [
   { value: 'date-desc', label: 'Yeni' },
@@ -104,6 +108,7 @@ export function FilterPanel({
   const [creating, setCreating] = useState(false);
   const [selectedColor, setSelectedColor] = useState(DEFAULT_COLLECTION_COLOR);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const { mounted, closing } = useExitPresence(open, EXIT_MS);
 
   useEffect(() => {
     if (!open) return;
@@ -114,7 +119,7 @@ export function FilterPanel({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const activeSourceId =
     typeof source === 'object' ? source.collectionId : source;
@@ -148,7 +153,12 @@ export function FilterPanel({
         role="dialog"
         aria-label="Filtreler"
         style={{ transform: 'translateX(-50%)' }}
-        className="pointer-events-auto fixed bottom-24 left-1/2 z-40 max-h-[min(78vh,760px)] w-[min(92vw,420px)] overflow-y-auto rounded-[22px] border border-line/90 bg-[#fffefa]/95 p-4 shadow-[0_1px_2px_rgba(28,27,24,0.05),0_24px_70px_-24px_rgba(28,27,24,0.45)] backdrop-blur-2xl animate-[menu-in_var(--dur-base)_var(--ease-out)]"
+        className={cn(
+          'pointer-events-auto fixed bottom-24 left-1/2 z-40 max-h-[min(78vh,760px)] w-[min(92vw,420px)] overflow-y-auto rounded-[22px] border border-line/90 bg-[#fffefa]/95 p-4 shadow-[0_1px_2px_rgba(28,27,24,0.05),0_24px_70px_-24px_rgba(28,27,24,0.45)] backdrop-blur-2xl',
+          closing
+            ? 'animate-[menu-out_var(--dur-exit)_var(--ease-out)_forwards]'
+            : 'animate-[menu-in_var(--dur-base)_var(--ease-out)]'
+        )}
       >
         <div className="mb-4 flex items-center justify-between">
           <div>

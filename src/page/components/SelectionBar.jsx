@@ -13,7 +13,10 @@ export function SelectionBar({
 }) {
   if (!visible) return null;
   return (
-    <div className="fixed bottom-24 left-1/2 z-40 flex max-w-[calc(100vw-32px)] -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-full border border-line/80 bg-white/80 px-4 py-2 text-text shadow-[0_1px_2px_rgba(28,27,24,0.04),0_14px_40px_-20px_rgba(28,27,24,0.4)] backdrop-blur-xl animate-[bar-center-in_var(--dur-base)_var(--ease-out)]">
+    <div
+      style={{ transform: 'translateX(-50%)' }}
+      className="fixed bottom-24 left-1/2 z-40 flex max-w-[calc(100vw-32px)] flex-wrap items-center justify-center gap-2 rounded-full border border-line/80 bg-white/80 px-4 py-2 text-text shadow-[0_1px_2px_rgba(28,27,24,0.04),0_14px_40px_-20px_rgba(28,27,24,0.4)] backdrop-blur-xl animate-[bar-center-in_var(--dur-base)_var(--ease-out)]"
+    >
       <span className="text-sm">{statusText ?? `${count} seçili`}</span>
       {onBulkAddToCollection && (
         <Button variant="ghost" size="sm" onClick={onBulkAddToCollection}>

@@ -29,7 +29,7 @@ export function Button({
       type={type}
       variant={VARIANTS[variant] ?? 'primary'}
       size={SIZES[size] ?? 'md'}
-      className={cn(VARIANT_CLASS[variant], className)}
+      className={cn('tappy-button', VARIANT_CLASS[variant], className)}
       {...props}
     />
   );

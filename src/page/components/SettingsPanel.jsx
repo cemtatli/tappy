@@ -12,6 +12,10 @@ import {
 import { BOOKMARKS_FEATURES } from '../../background/xConfig.js';
 import { featureLabel } from '../lib/featureLabels.js';
 import { connectionState, filledCount } from '../lib/xConnection.js';
+import { useExitPresence } from '../lib/usePresence.js';
+
+// Matches --dur-exit in app.css.
+const EXIT_MS = 160;
 
 function InfoHint({ label, children }) {
   const [open, setOpen] = useState(false);
@@ -62,8 +66,10 @@ function Disclosure({ id, title, open, onToggle, children }) {
         {title}
       </Button>
       {open && (
-        <div id={id} className="pb-4">
-          {children}
+        <div id={id} className="disclosure-content">
+          <div>
+            <div className="pb-4">{children}</div>
+          </div>
         </div>
       )}
     </section>
@@ -147,6 +153,7 @@ export function SettingsPanel({ open, onClose }) {
   // null until the user picks a side, so the connection state decides the default.
   const [advancedOpen, setAdvancedOpen] = useState(null);
   const [featuresOpen, setFeaturesOpen] = useState(false);
+  const { mounted, closing } = useExitPresence(open, EXIT_MS);
 
   useEffect(() => {
     if (!open) return;
@@ -168,7 +175,7 @@ export function SettingsPanel({ open, onClose }) {
     });
   }, [open]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const config = { bearerToken, bookmarksQueryId, deleteBookmarkQueryId };
   const state = connectionState({ isLoggedIn, ...config });
@@ -222,10 +229,20 @@ export function SettingsPanel({ open, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-[fade-in_var(--dur-base)_var(--ease-out)]"
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm ${
+        closing
+          ? 'animate-[fade-out_var(--dur-exit)_var(--ease-out)_forwards]'
+          : 'animate-[fade-in_var(--dur-base)_var(--ease-out)]'
+      }`}
       onClick={handleBackdropClick}
     >
-      <div className="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius)] border border-line bg-white p-6 text-text shadow-[0_8px_30px_rgba(0,0,0,0.12)] animate-[settings-in_var(--dur-base)_var(--ease-out)]">
+      <div
+        className={`relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius)] border border-line bg-white p-6 text-text shadow-[0_8px_30px_rgba(0,0,0,0.12)] ${
+          closing
+            ? 'animate-[settings-out_var(--dur-exit)_var(--ease-out)_forwards]'
+            : 'animate-[settings-in_var(--dur-base)_var(--ease-out)]'
+        }`}
+      >
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-text">Ayarlar</h2>
           <Button

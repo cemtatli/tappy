@@ -118,7 +118,11 @@ export function ImageLightbox({
       aria-modal="true"
       aria-label="Resim önizleme"
       data-closing={closing ? 'true' : undefined}
-      className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-[var(--dur-base)] ease-[var(--ease-out)] ${closing ? 'opacity-0' : 'opacity-100'}`}
+      className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-[var(--dur-base)] ease-[var(--ease-out)] ${
+        closing
+          ? 'opacity-0'
+          : 'animate-[fade-in_var(--dur-base)_var(--ease-out)] opacity-100'
+      }`}
       onClick={startClose}
     >
       <div

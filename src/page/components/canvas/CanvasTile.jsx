@@ -70,9 +70,13 @@ export const CanvasTile = memo(function CanvasTile({
         className="relative overflow-hidden bg-[#efede7]"
         style={{ height: tile.imageH }}
       >
-        {!loaded && (
-          <div className="absolute inset-0 animate-pulse bg-[#e8e5dd]" />
-        )}
+        <div
+          aria-hidden="true"
+          className={cn(
+            'absolute inset-0 bg-[#e8e5dd] transition-opacity duration-[var(--dur-slow)] ease-[var(--ease-out)]',
+            loadState === 'loading' ? 'animate-pulse opacity-100' : 'opacity-0'
+          )}
+        />
         {loadState === 'error' && (
           <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(145deg,#f1eee7,#e5e0d6)] text-[10.5px] font-medium text-muted">
             @{image.authorHandle}

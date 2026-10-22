@@ -1,5 +1,9 @@
 import { Check } from 'lucide-react';
 import { Button } from './ui/Button.jsx';
+import { useExitPresence } from '../lib/usePresence.js';
+
+// Matches --dur-exit in app.css.
+const EXIT_MS = 160;
 
 export function AddToCollectionMenu({
   open,
@@ -8,11 +12,20 @@ export function AddToCollectionMenu({
   onToggle,
   onClose,
 }) {
-  if (!open) return null;
+  const { mounted, closing } = useExitPresence(open, EXIT_MS);
+
+  if (!mounted) return null;
   return (
     <>
       <div className="fixed inset-0 z-[60]" onClick={onClose} />
-      <div className="fixed bottom-24 left-1/2 z-[60] w-56 -translate-x-1/2 rounded-xl border border-line bg-white p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] origin-bottom animate-[menu-in_var(--dur-base)_var(--ease-out)]">
+      <div
+        style={{ transform: 'translateX(-50%)' }}
+        className={`fixed bottom-24 left-1/2 z-[60] w-56 rounded-xl border border-line bg-white p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] origin-bottom ${
+          closing
+            ? 'animate-[menu-out_var(--dur-exit)_var(--ease-out)_forwards]'
+            : 'animate-[menu-in_var(--dur-base)_var(--ease-out)]'
+        }`}
+      >
         <p className="px-2 py-1 text-xs uppercase text-muted">
           Koleksiyona ekle
         </p>

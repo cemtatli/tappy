@@ -17,7 +17,7 @@ export const Input = forwardRef(function Input(
     <input
       ref={ref}
       className={cn(
-        'lg-input',
+        'lg-input lg-tappy-input',
         VARIANTS[variant] ?? VARIANTS.default,
         className
       )}

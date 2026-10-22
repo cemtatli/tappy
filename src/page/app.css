@@ -18,6 +18,7 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --dur-fast: 150ms;
   --dur-base: 200ms;
+  --dur-exit: 160ms;
   --dur-slow: 300ms;
 }
 
@@ -49,6 +50,58 @@ html[data-lg-theme='light'] {
     --lg-prominent-shade: 92 10 8;
     --lg-prominent-tint: grayscale(1) contrast(0.45) brightness(0.4) sepia(1)
       hue-rotate(-8deg) saturate(6) brightness(1.1);
+  }
+
+  /* A press settles the glass in place instead of only changing its shadow. */
+  .lg-button.tappy-button.tappy-button {
+    transform-origin: center;
+    transition:
+      --lg-button-rise var(--lg-button-rise-time) var(--lg-ease-out),
+      --lg-button-light-angle var(--lg-button-light-time, 200ms)
+        var(--lg-button-light-ease, var(--lg-ease-out)),
+      scale 160ms var(--ease-out);
+  }
+
+  .lg-button.tappy-button[data-pressed='true']:not(
+      :disabled,
+      [aria-disabled='true']
+    ) {
+    scale: 0.965;
+  }
+
+  /* Tappy focus is one soft halo, not three stacked orange outlines. */
+  .lg-input.lg-tappy-input {
+    caret-color: var(--color-accent);
+    transition:
+      background-color var(--dur-base) var(--ease-out),
+      border-color var(--dur-base) var(--ease-out),
+      box-shadow var(--dur-base) var(--ease-out);
+  }
+
+  .lg-input.lg-tappy-input:focus,
+  .lg-input.lg-tappy-input:focus-visible {
+    border-color: rgb(232 116 12 / 0.32);
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--color-accent),
+      0 0 0 5px rgb(232 116 12 / 0.12),
+      inset 0 1px 2px rgb(40 30 18 / 0.05);
+  }
+
+  .lg-input.lg-tappy-input[aria-invalid='true'] {
+    border-color: rgb(255 59 48 / 0.65);
+    box-shadow:
+      0 0 0 3px rgb(255 59 48 / 0.12),
+      inset 0 1px 2px rgb(40 30 18 / 0.05);
+  }
+
+  .lg-input.lg-tappy-input[aria-invalid='true']:focus,
+  .lg-input.lg-tappy-input[aria-invalid='true']:focus-visible {
+    border-color: rgb(255 59 48 / 0.4);
+    box-shadow:
+      0 0 0 2px var(--color-danger),
+      0 0 0 5px rgb(255 59 48 / 0.14),
+      inset 0 1px 2px rgb(40 30 18 / 0.05);
   }
 }
 
@@ -105,6 +158,35 @@ body {
   box-shadow:
     0 0 0 3px rgb(232 116 12 / 0.2),
     0 22px 52px -20px rgb(28 27 24 / 0.45);
+}
+
+.canvas-card:focus-visible {
+  outline: 2px solid rgb(232 116 12 / 0.65);
+  outline-offset: 3px;
+}
+
+/* Disclosure bodies grow into place. @starting-style supplies the collapsed
+   first frame so the grid row can transition on mount; older engines simply
+   show the content immediately. */
+.disclosure-content {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows var(--dur-base) var(--ease-out),
+    opacity var(--dur-base) var(--ease-out);
+}
+
+@starting-style {
+  .disclosure-content {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+.disclosure-content > div {
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* The lightbox autofocuses its close button; keep that quiet, but give
@@ -222,6 +304,38 @@ body {
   }
 }
 
+/* Leaving travels less than arriving, so closing never upstages opening. */
+@keyframes menu-out {
+  from {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-50%) translateY(4px) scale(0.98);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes settings-out {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.97);
+    opacity: 0;
+  }
+}
+
 /* Percentage, not pixels: the panel travels exactly its own width. */
 @keyframes panel-in {
   from {
@@ -290,6 +404,14 @@ body {
       opacity: 1;
     }
   }
+  @keyframes settings-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
   @keyframes lightbox-in {
     from {
       opacity: 0;
@@ -330,6 +452,22 @@ body {
       opacity: 1;
     }
   }
+  @keyframes menu-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
   @keyframes panel-in {
     from {
       opacity: 0;
@@ -357,6 +495,14 @@ body {
   .tile-lift:hover {
     transform: none;
   }
+
+  .lg-button.tappy-button[data-pressed='true'] {
+    scale: 1 !important;
+  }
+}
+
+html[data-lg-reduce-motion='1'] .lg-button.tappy-button[data-pressed='true'] {
+  scale: 1 !important;
 }
 
 /* Reduced transparency: make the toast material solid for readability. */
