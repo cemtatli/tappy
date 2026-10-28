@@ -29,7 +29,7 @@ Works in Chrome, Edge, Brave and other Chromium browsers. Not on the Chrome Web 
 
 ## How it works
 
-The extension reads **your own** bookmarks from X's GraphQL API using the session cookies (`ct0` / `auth_token`) already in your browser. Data is kept in **IndexedDB** with incremental sync (fetch the newest, page backwards through the older ones). Cookie values never leave the background service worker, and no secrets are bundled with the code.
+The extension reads **your own** bookmarks from X's GraphQL API using the session cookies (`ct0` / `auth_token`) already in your browser. Data is kept in **IndexedDB** (via Dexie) with incremental sync (fetch the newest, page backwards through the older ones). Cookie values never leave the background service worker, and no secrets are bundled with the code.
 
 The X-specific values — bearer token, Bookmarks query ID, Delete Bookmark query ID — are **not hardcoded**. The extension picks them up from your own x.com traffic, or you can paste them in from DevTools. Either way they live in `chrome.storage.local`. X rotates these regularly; when a request starts failing, the extension rediscovers them and retries.
 
@@ -39,7 +39,7 @@ Settings reflects that: a healthy connection shows nothing to configure, and the
 
 ## Tech
 
-Chrome MV3 · React 19 · Tailwind 4 (`@theme` tokens) · `@base-ui/react` · `@tanstack/react-virtual` · lucide-react · Vite · Vitest + jsdom + fake-indexeddb.
+Chrome MV3 · React 19 · Dexie · Tailwind 4 (`@theme` tokens) · `@base-ui/react` · `@tanstack/react-virtual` · lucide-react · Vite · Vitest + jsdom + fake-indexeddb.
 
 The UI is currently in Turkish.
 

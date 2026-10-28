@@ -154,3 +154,65 @@ describe('categories (v2)', () => {
     db.close();
   });
 });
+
+// The pre-Dexie schema, written with the raw IndexedDB API at version 3.
+function openLegacyDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('x-bookmarker', 3);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      const tweets = db.createObjectStore('tweets', { keyPath: 'id' });
+      tweets.createIndex('sortIndex', 'sortIndex');
+      db.createObjectStore('meta', { keyPath: 'key' });
+      db.createObjectStore('categories', { keyPath: 'id' });
+      db.createObjectStore('collections', { keyPath: 'id' });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function writeLegacy(db, storeName, records) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    for (const record of records) tx.objectStore(storeName).put(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+describe('migration from the hand-written IndexedDB schema', () => {
+  it('keeps every record when Dexie opens a version 3 database', async () => {
+    const legacy = await openLegacyDb();
+    await writeLegacy(legacy, 'tweets', [
+      { ...tweet('1', '1000'), categoryId: 'c1' },
+      tweet('2', '20000'),
+    ]);
+    await writeLegacy(legacy, 'meta', [{ key: 'olderCursor', value: 'CUR' }]);
+    await writeLegacy(legacy, 'categories', [
+      { id: 'c1', name: 'A', order: 0, createdAt: '2026-01-01' },
+    ]);
+    await writeLegacy(legacy, 'collections', [
+      {
+        id: 'col1',
+        name: 'Mood',
+        order: 0,
+        createdAt: '2026-01-01',
+        imageKeys: ['1:0'],
+      },
+    ]);
+    legacy.close();
+
+    const db = await openDb();
+    expect(db.verno).toBe(1);
+    expect((await getAllTweets(db)).map((t) => t.id)).toEqual(['2', '1']);
+    expect(await getMeta(db, 'olderCursor')).toBe('CUR');
+    expect((await listCategories(db)).map((c) => c.id)).toEqual(['c1']);
+    expect(await db.collections.get('col1')).toMatchObject({
+      imageKeys: ['1:0'],
+    });
+
+    // The sortIndex index survives the upgrade.
+    expect(await db.tweets.where('sortIndex').equals('1000').count()).toBe(1);
+  });
+});
