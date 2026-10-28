@@ -22,18 +22,45 @@ function dayBoundary(value, nextDay = false) {
   return date.getTime();
 }
 
+// Folds case and accents so Turkish and accented text match however it is
+// typed: "İzmir", "izmir" and "IZMIR" are equal, as are "café"/"cafe" and
+// "şaşırt"/"sasirt". NFD splits letters from their marks (which also removes
+// the stray dot "İ".toLowerCase() leaves); dotless ı has no mark to strip.
+export function foldText(value) {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/ı/g, 'i');
+}
+
+// Folding every tweet on every keystroke is the expensive part of search, so
+// the folded haystack is cached per tweet object.
+const haystacks = new WeakMap();
+
+function searchHaystack(tweet) {
+  let hay = haystacks.get(tweet);
+  if (hay === undefined) {
+    hay = foldText(
+      `${tweet.text ?? ''} ${tweet.authorName ?? ''} ${tweet.authorHandle ?? ''}`
+    );
+    haystacks.set(tweet, hay);
+  }
+  return hay;
+}
+
 export function applyFilters(tweets, filters = {}) {
-  const search = (filters.search ?? '').trim().toLowerCase();
+  // Every word must appear, in any order: "native react" finds "React Native".
+  const terms = foldText(filters.search).split(/\s+/).filter(Boolean);
   const author = (filters.author ?? '').trim().replace(/^@/, '').toLowerCase();
   const from = dayBoundary(filters.dateFrom);
   const to = dayBoundary(filters.dateTo, true);
   const minLikes = Number(filters.minLikes);
 
   return tweets.filter((t) => {
-    if (search) {
-      const hay =
-        `${t.text ?? ''} ${t.authorName ?? ''} ${t.authorHandle ?? ''}`.toLowerCase();
-      if (!hay.includes(search)) return false;
+    if (terms.length) {
+      const hay = searchHaystack(t);
+      if (!terms.every((term) => hay.includes(term))) return false;
     }
     if (
       author &&

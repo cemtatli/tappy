@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   openDb,
   getAllTweets,
@@ -119,9 +126,12 @@ export function App() {
     return allTweets;
   }, [allTweets, source, collections]);
 
+  // Typing stays responsive: React renders the keystroke first and refilters
+  // and re-lays out the canvas in a lower-priority pass.
+  const deferredFilters = useDeferredValue(filters);
   const filteredTweets = useMemo(
-    () => sortTweets(applyFilters(sourceTweets, filters), sortMode),
-    [sourceTweets, filters, sortMode]
+    () => sortTweets(applyFilters(sourceTweets, deferredFilters), sortMode),
+    [sourceTweets, deferredFilters, sortMode]
   );
 
   const canvasImages = useMemo(() => {

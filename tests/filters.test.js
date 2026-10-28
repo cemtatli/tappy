@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyFilters } from '../src/shared/filters.js';
+import { applyFilters, foldText } from '../src/shared/filters.js';
 
 const tweets = [
   {
@@ -108,5 +108,28 @@ describe('applyFilters', () => {
     expect(applyFilters(tweets, { minLikes: '101' })).toEqual([]);
     expect(applyFilters([{ id: 'missing' }], { minLikes: '1' })).toEqual([]);
     expect(applyFilters(tweets, { minLikes: '' })).toHaveLength(2);
+  });
+});
+
+describe('search folding', () => {
+  const posts = [
+    { id: 'tr', text: 'İzmir’de şaşırtıcı bir gün', authorName: 'Ayşe' },
+    { id: 'en', text: 'React Native tips at the café', authorName: 'Ian' },
+  ];
+  const ids = (search) => applyFilters(posts, { search }).map((t) => t.id);
+
+  it('folds Turkish casing and accents', () => {
+    expect(foldText('İzmir')).toBe('izmir');
+    expect(foldText('IZMIR')).toBe('izmir');
+    expect(ids('izmir')).toEqual(['tr']);
+    expect(ids('SASIRT')).toEqual(['tr']);
+    expect(ids('ayse')).toEqual(['tr']);
+    expect(ids('cafe')).toEqual(['en']);
+    expect(ids('ıan')).toEqual(['en']);
+  });
+
+  it('matches every word in any order', () => {
+    expect(ids('native react')).toEqual(['en']);
+    expect(ids('react izmir')).toEqual([]);
   });
 });
