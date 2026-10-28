@@ -99,6 +99,7 @@ const CARD_WIDTHS = [200, 224, 248, 272];
 const IMAGE_RATIOS = [0.62, 0.78, 1, 1.24];
 const TITLE_LINE_HEIGHT = 17;
 const FOOTER_BASE = 50;
+const MIN_ROW_WIDTH = 1720;
 
 function cleanText(text) {
   return (text ?? '')
@@ -132,8 +133,18 @@ export function cardMetrics(image) {
 // Rows are centred on the origin and alternate below/above the first row. The
 // newest row sits at the centre, and later rows grow outward in all four
 // directions, so panning left, right, up or down always arrives at content.
+//
+// Without an explicit rowWidth the row length follows the total card area, so
+// the world comes out roughly square instead of one narrow, very tall strip.
 export function layoutScatter(images, opts = {}) {
-  const { rowWidth = 1720, gapX = 42, gapY = 58 } = opts;
+  const { gapX = 42, gapY = 58 } = opts;
+  const metricsList = images.map(cardMetrics);
+  let area = 0;
+  for (const metrics of metricsList) {
+    area += (metrics.w + gapX) * (metrics.h + gapY);
+  }
+  const rowWidth =
+    opts.rowWidth ?? Math.max(MIN_ROW_WIDTH, Math.round(Math.sqrt(area)));
   const rows = [];
   let row = [];
   let rowIndex = 0;
@@ -158,8 +169,8 @@ export function layoutScatter(images, opts = {}) {
     rowIndex += 1;
   }
 
-  for (const image of images) {
-    const metrics = cardMetrics(image);
+  images.forEach((image, order) => {
+    const metrics = metricsList[order];
     if (x > 0 && x + metrics.w > rowWidth) flushRow();
     if (row.length === 0) x = (rowIndex % 4) * 22;
     const hash = hashKey(image.imageKey);
@@ -179,7 +190,7 @@ export function layoutScatter(images, opts = {}) {
     if (x >= rowWidth) {
       flushRow();
     }
-  }
+  });
   flushRow();
 
   const tiles = [];
@@ -232,5 +243,36 @@ export function layoutScatter(images, opts = {}) {
     minY,
     maxX,
     maxY,
+    // Repeat distance when the world is tiled: one gap keeps the seam the same
+    // width as the space between neighbouring cards.
+    periodX: maxX - minX + gapX,
+    periodY: maxY - minY + gapY,
   };
+}
+
+// Tiles the world on both axes and returns the copies that touch the viewport.
+// Each copy carries its offset and the original tile objects, so callers can
+// translate a whole copy at once and keep tile references stable across pans.
+export function visibleCopies(index, viewport, layout) {
+  const { minX, minY, periodX, periodY } = layout;
+  const kx0 = Math.floor((viewport.x - minX) / periodX);
+  const kx1 = Math.floor((viewport.x + viewport.width - minX) / periodX);
+  const ky0 = Math.floor((viewport.y - minY) / periodY);
+  const ky1 = Math.floor((viewport.y + viewport.height - minY) / periodY);
+  const copies = [];
+
+  for (let ky = ky0; ky <= ky1; ky += 1) {
+    for (let kx = kx0; kx <= kx1; kx += 1) {
+      const dx = kx * periodX;
+      const dy = ky * periodY;
+      const tiles = visibleTilesFromIndex(index, {
+        x: viewport.x - dx,
+        y: viewport.y - dy,
+        width: viewport.width,
+        height: viewport.height,
+      });
+      if (tiles.length) copies.push({ key: `${kx}:${ky}`, dx, dy, tiles });
+    }
+  }
+  return copies;
 }

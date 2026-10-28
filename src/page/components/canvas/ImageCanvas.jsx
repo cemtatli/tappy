@@ -9,6 +9,7 @@ import {
 import {
   createTileIndex,
   layoutScatter,
+  visibleCopies,
   visibleTilesFromIndex,
 } from '../../lib/canvasLayout.js';
 import { clampZoom } from '../../lib/canvasZoom.js';
@@ -20,6 +21,14 @@ const MOMENTUM_DECAY = 0.92;
 // expressed in screen pixels so the margin feels the same at every zoom.
 const OVERSCAN_PX = 360;
 const HIGHLIGHT_MS = 3200;
+// Small sets stay a single finite world; tiling them would put the same few
+// cards on screen several times at once.
+const WRAP_MIN_TILES = 50;
+// Below this zoom cards switch to a light rendering: small image, no caption,
+// no shadow. Hundreds of full cards on screen is what makes far zoom stutter.
+const COMPACT_ZOOM = 0.5;
+// Pan/zoom marks the world as moving until input settles for this long.
+const SETTLE_MS = 140;
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
@@ -38,6 +47,18 @@ function tilePan(tile, size, zoom) {
   return {
     x: size.width / 2 - (tile.x + tile.w / 2) * zoom,
     y: size.height / 2 - (tile.y + tile.h / 2) * zoom,
+  };
+}
+
+// On a tiled world every target exists once per copy. Pick the copy closest to
+// the current pan so flights stay short no matter how far the user wandered.
+function nearestCopyPan(target, from, layout, zoom, wrap) {
+  if (!wrap) return target;
+  const stepX = layout.periodX * zoom;
+  const stepY = layout.periodY * zoom;
+  return {
+    x: target.x + Math.round((from.x - target.x) / stepX) * stepX,
+    y: target.y + Math.round((from.y - target.y) / stepY) * stepY,
   };
 }
 
@@ -60,6 +81,9 @@ export function ImageCanvas({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [focusedKey, setFocusedKey] = useState(null);
+  const [moving, setMoving] = useState(false);
+  const settleTimerRef = useRef(0);
+  const compact = zoom < COMPACT_ZOOM;
 
   // rAF batched pan: drag and momentum can fire faster than React renders.
   const pendingPanRef = useRef(null);
@@ -85,7 +109,19 @@ export function ImageCanvas({
     setPan(next);
   }
 
+  // While the world moves, hover and hit-testing are switched off (app.css),
+  // so the browser only composites the transform.
+  function markMoving() {
+    setMoving(true);
+    window.clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = window.setTimeout(
+      () => setMoving(false),
+      SETTLE_MS
+    );
+  }
+
   function schedulePan(next) {
+    markMoving();
     pendingPanRef.current = next;
     if (rafRef.current) return;
     rafRef.current = requestAnimationFrame(() => {
@@ -155,6 +191,7 @@ export function ImageCanvas({
   }, []);
 
   const layout = useMemo(() => layoutScatter(images), [images]);
+  const wrap = layout.tiles.length >= WRAP_MIN_TILES;
   const imagesByKey = useMemo(
     () => new Map(images.map((image) => [image.imageKey, image])),
     [images]
@@ -220,7 +257,10 @@ export function ImageCanvas({
         skipAnchorRef.current = true;
         onZoomChange(targetZoom);
       }
-      animatePanTo(homePan(size), 680);
+      animatePanTo(
+        nearestCopyPan(homePan(size), panRef.current, layout, targetZoom, wrap),
+        680
+      );
       return;
     }
 
@@ -236,7 +276,16 @@ export function ImageCanvas({
       skipAnchorRef.current = true;
       onZoomChange(targetZoom);
     }
-    animatePanTo(tilePan(tile, size, targetZoom), 700);
+    animatePanTo(
+      nearestCopyPan(
+        tilePan(tile, size, targetZoom),
+        panRef.current,
+        layout,
+        targetZoom,
+        wrap
+      ),
+      700
+    );
     setFocusedKey(tile.imageKey);
     window.clearTimeout(highlightTimerRef.current);
     highlightTimerRef.current = window.setTimeout(
@@ -246,19 +295,22 @@ export function ImageCanvas({
     // animatePanTo is recreated per render on purpose; the nonce guard above
     // ensures this effect only reacts to a new request.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusRequest, layout, size, zoom, onZoomChange]);
+  }, [focusRequest, layout, size, zoom, onZoomChange, wrap]);
 
   const tileIndex = useMemo(() => createTileIndex(layout.tiles), [layout]);
-  const shown = useMemo(() => {
+  const copies = useMemo(() => {
     const inverseZoom = 1 / zoom;
     const overscan = OVERSCAN_PX * inverseZoom;
-    return visibleTilesFromIndex(tileIndex, {
+    const viewport = {
       x: -pan.x * inverseZoom - overscan,
       y: -pan.y * inverseZoom - overscan,
       width: size.width * inverseZoom + overscan * 2,
       height: size.height * inverseZoom + overscan * 2,
-    });
-  }, [tileIndex, pan.x, pan.y, size.width, size.height, zoom]);
+    };
+    if (wrap) return visibleCopies(tileIndex, viewport, layout);
+    const tiles = visibleTilesFromIndex(tileIndex, viewport);
+    return tiles.length ? [{ key: '0:0', dx: 0, dy: 0, tiles }] : [];
+  }, [tileIndex, layout, wrap, pan.x, pan.y, size.width, size.height, zoom]);
 
   function startMomentum(initialVelocity) {
     cancelMomentum();
@@ -266,6 +318,7 @@ export function ImageCanvas({
     let vx = initialVelocity.x;
     let vy = initialVelocity.y;
     function step() {
+      markMoving();
       if (Math.abs(vx) < 0.08 && Math.abs(vy) < 0.08) {
         momentumRef.current = 0;
         return;
@@ -353,6 +406,7 @@ export function ImageCanvas({
     function onWheel(e) {
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
+        markMoving();
         const rect = el.getBoundingClientRect();
         zoomAnchorRef.current = {
           x: e.clientX - rect.left,
@@ -378,6 +432,7 @@ export function ImageCanvas({
       cancelMomentum();
       cancelTween();
       window.clearTimeout(highlightTimerRef.current);
+      window.clearTimeout(settleTimerRef.current);
     };
   }, []);
 
@@ -412,24 +467,35 @@ export function ImageCanvas({
       }}
     >
       <div
-        className="absolute left-0 top-0 origin-top-left"
+        className="canvas-world absolute left-0 top-0 origin-top-left"
+        data-compact={compact ? 'true' : undefined}
+        data-moving={moving ? 'true' : undefined}
         style={{
           transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
           transformOrigin: '0 0',
           willChange: 'transform',
         }}
       >
-        {shown.map((tile) => (
-          <CanvasTileWrapper
-            key={tile.imageKey}
-            tile={tile}
-            image={imagesByKey.get(tile.imageKey)}
-            selectionMode={selectionMode}
-            selected={selectedIds.has(tile.imageKey)}
-            highlighted={focusedKey === tile.imageKey}
-            onToggleSelect={onToggleSelect}
-            onOpenLightbox={onOpenLightbox}
-          />
+        {copies.map((copy) => (
+          <div
+            key={copy.key}
+            className="absolute left-0 top-0"
+            style={{ transform: `translate(${copy.dx}px, ${copy.dy}px)` }}
+          >
+            {copy.tiles.map((tile) => (
+              <CanvasTileWrapper
+                key={tile.imageKey}
+                tile={tile}
+                image={imagesByKey.get(tile.imageKey)}
+                selectionMode={selectionMode}
+                selected={selectedIds.has(tile.imageKey)}
+                highlighted={focusedKey === tile.imageKey}
+                onToggleSelect={onToggleSelect}
+                onOpenLightbox={onOpenLightbox}
+                compact={compact}
+              />
+            ))}
+          </div>
         ))}
       </div>
     </div>

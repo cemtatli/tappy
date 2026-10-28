@@ -10,7 +10,7 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   };
 }
 
-// jsdom matchMedia'yi desteklemez; Glassy UI preference sorguları istiyor.
+// jsdom has no matchMedia; the canvas queries prefers-reduced-motion.
 if (typeof window !== 'undefined' && typeof window.matchMedia === 'undefined') {
   window.matchMedia = (query) => ({
     matches: false,

@@ -25,6 +25,7 @@ export const CanvasTile = memo(function CanvasTile({
   highlighted,
   onToggleSelect,
   onOpenLightbox,
+  compact = false,
 }) {
   const [loadState, setLoadState] = useState('loading');
   const isExtraFrame = (image.mediaIndex ?? 0) > 0;
@@ -67,23 +68,25 @@ export const CanvasTile = memo(function CanvasTile({
       }}
     >
       <div
-        className="relative overflow-hidden bg-[#efede7]"
+        className="relative overflow-hidden bg-[#efeff2]"
         style={{ height: tile.imageH }}
       >
         <div
           aria-hidden="true"
           className={cn(
-            'absolute inset-0 bg-[#e8e5dd] transition-opacity duration-[var(--dur-slow)] ease-[var(--ease-out)]',
-            loadState === 'loading' ? 'animate-pulse opacity-100' : 'opacity-0'
+            'absolute inset-0 bg-[#e8e8ec] transition-opacity duration-[var(--dur-slow)] ease-[var(--ease-out)]',
+            loadState === 'loading'
+              ? cn('opacity-100', !compact && 'animate-pulse')
+              : 'opacity-0'
           )}
         />
         {loadState === 'error' && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(145deg,#f1eee7,#e5e0d6)] text-[10.5px] font-medium text-muted">
+          <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(145deg,#f2f2f5,#e4e4e9)] text-[10.5px] font-medium text-muted">
             @{image.authorHandle}
           </div>
         )}
         <img
-          src={displayUrl(image.url)}
+          src={displayUrl(image.url, compact ? '240x240' : 'small')}
           alt=""
           loading="lazy"
           decoding="async"
@@ -97,37 +100,45 @@ export const CanvasTile = memo(function CanvasTile({
           )}
         />
         <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-black/[0.04]" />
-        {(image.mediaCount ?? 1) > 1 && (
+        {!compact && (image.mediaCount ?? 1) > 1 && (
           <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-black/45 px-1.5 py-0.5 text-[9.5px] font-medium tabular-nums text-white backdrop-blur-sm">
             {image.mediaIndex + 1}/{image.mediaCount}
           </span>
         )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col px-3.5 pb-3 pt-3">
-        <p
-          className={cn(
-            'line-clamp-3 text-[13px] font-semibold leading-[17px] tracking-[-0.005em] text-text',
-            isExtraFrame && 'text-[12px] font-medium text-muted'
-          )}
-        >
-          {text}
-        </p>
-        <div className="mt-auto flex items-center gap-1.5 pt-2 text-[10.5px] leading-none text-muted">
-          <span className="truncate">@{image.authorHandle}</span>
-          {(image.likeCount ?? 0) > 0 && (
-            <span className="ml-auto inline-flex shrink-0 items-center gap-1 tabular-nums">
-              <Heart size={10} strokeWidth={2} />
-              {formatCount(image.likeCount)}
-            </span>
-          )}
+      {/* Far out the caption is unreadable; skip its text layout entirely. */}
+      {compact ? (
+        <div className="flex flex-1 flex-col justify-center gap-2 px-3.5">
+          <span className="h-2 w-3/4 rounded-full bg-black/[0.07]" />
+          <span className="h-2 w-1/3 rounded-full bg-black/[0.05]" />
         </div>
-      </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col px-3.5 pb-3 pt-3">
+          <p
+            className={cn(
+              'line-clamp-3 text-[13px] font-semibold leading-[17px] tracking-[-0.005em] text-text',
+              isExtraFrame && 'text-[12px] font-medium text-muted'
+            )}
+          >
+            {text}
+          </p>
+          <div className="mt-auto flex items-center gap-1.5 pt-2 text-[10.5px] leading-none text-muted">
+            <span className="truncate">@{image.authorHandle}</span>
+            {(image.likeCount ?? 0) > 0 && (
+              <span className="ml-auto inline-flex shrink-0 items-center gap-1 tabular-nums">
+                <Heart size={10} strokeWidth={2} />
+                {formatCount(image.likeCount)}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {selectionMode && (
         <div className="pointer-events-none absolute inset-0 p-2.5">
           <span
-            className="pointer-events-auto inline-flex rounded-[7px] bg-white/90 p-0.5 shadow-[0_2px_8px_rgba(28,27,24,0.18)]"
+            className="pointer-events-auto inline-flex rounded-[7px] bg-white/90 p-0.5 shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >

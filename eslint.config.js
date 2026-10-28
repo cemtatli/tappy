@@ -4,9 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 
 export default [
-  {
-    ignores: ['dist/**', 'node_modules/**', 'src/page/components/glassyui/**'],
-  },
+  { ignores: ['dist/**', 'node_modules/**'] },
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx,mjs}'],

@@ -1,6 +1,5 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Check,
   Heart,
   History,
   Image as ImageIcon,
@@ -15,6 +14,7 @@ import { EMPTY_FILTERS } from '../../shared/filters.js';
 import { FAVORITES_ID } from '../../shared/db.js';
 import { Input } from './ui/Input.jsx';
 import { Button } from './ui/Button.jsx';
+import { Segmented } from './ui/Segmented.jsx';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -38,25 +38,23 @@ const SORT_OPTIONS = [
   { value: 'likes-desc', label: 'Beğeni' },
 ];
 
+const SOURCE_OPTIONS = [
+  { value: 'all', label: 'Tümü', Icon: Layers },
+  { value: 'images', label: 'Görseller', Icon: ImageIcon },
+  { value: FAVORITES_ID, label: 'Favoriler', Icon: Heart },
+];
+
+const MEDIA_OPTIONS = [
+  { value: 'all', label: 'Tümü' },
+  { value: 'with-media', label: 'Görselli' },
+  { value: 'text-only', label: 'Görselsiz' },
+];
+
 function SectionLabel({ children }) {
   return (
     <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-muted">
       {children}
     </p>
-  );
-}
-
-function Pill({ active, className, children, ...props }) {
-  return (
-    <Button
-      variant={active ? 'default' : 'outline'}
-      size="sm"
-      aria-pressed={active}
-      className={cn('h-9 w-full px-3 text-[12px]', className)}
-      {...props}
-    >
-      {children}
-    </Button>
   );
 }
 
@@ -103,7 +101,6 @@ export function FilterPanel({
   onLoadOlder,
   loadingOlder,
 }) {
-  const id = useId();
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const [selectedColor, setSelectedColor] = useState(DEFAULT_COLLECTION_COLOR);
@@ -154,10 +151,10 @@ export function FilterPanel({
         aria-label="Filtreler"
         style={{ transform: 'translateX(-50%)' }}
         className={cn(
-          'pointer-events-auto fixed bottom-24 left-1/2 z-40 max-h-[min(78vh,760px)] w-[min(92vw,420px)] overflow-y-auto rounded-[22px] border border-line/90 bg-[#fffefa]/95 p-4 shadow-[0_1px_2px_rgba(28,27,24,0.05),0_24px_70px_-24px_rgba(28,27,24,0.45)] backdrop-blur-2xl',
+          'glass pointer-events-auto fixed left-1/2 top-[72px] z-40 max-h-[min(calc(100vh-176px),760px)] w-[min(92vw,420px)] overflow-y-auto rounded-[24px] bg-white/85 p-4',
           closing
-            ? 'animate-[menu-out_var(--dur-exit)_var(--ease-out)_forwards]'
-            : 'animate-[menu-in_var(--dur-base)_var(--ease-out)]'
+            ? 'animate-[panel-drop-out_var(--dur-exit)_var(--ease-out)_forwards]'
+            : 'animate-[panel-drop-in_var(--dur-slow)_var(--ease-out)]'
         )}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -173,8 +170,10 @@ export function FilterPanel({
             <Button
               variant="ghost"
               size="sm"
+              aria-label="Filtreleri temizle"
               onClick={onReset}
               disabled={!hasFilters}
+              className="text-[13px] font-medium text-muted hover:text-text disabled:opacity-40"
             >
               Temizle
             </Button>
@@ -191,26 +190,16 @@ export function FilterPanel({
         </div>
 
         <SectionLabel>Kaynak</SectionLabel>
-        <div className="grid grid-cols-3 gap-1.5">
-          <Pill active={source === 'all'} onClick={() => onSourceChange('all')}>
-            <Layers size={13} />
-            Tümü
-          </Pill>
-          <Pill
-            active={source === 'images'}
-            onClick={() => onSourceChange('images')}
-          >
-            <ImageIcon size={13} />
-            Görseller
-          </Pill>
-          <Pill
-            active={activeSourceId === FAVORITES_ID}
-            onClick={() => onSourceChange({ collectionId: FAVORITES_ID })}
-          >
-            <Heart size={13} />
-            Favoriler
-          </Pill>
-        </div>
+        <Segmented
+          label="Kaynak"
+          value={activeSourceId}
+          options={SOURCE_OPTIONS}
+          onChange={(value) =>
+            onSourceChange(
+              value === FAVORITES_ID ? { collectionId: FAVORITES_ID } : value
+            )
+          }
+        />
 
         <div className="mb-2 mt-5 flex items-center justify-between">
           <SectionLabel>Koleksiyonlar</SectionLabel>
@@ -341,23 +330,17 @@ export function FilterPanel({
         <div className="mb-2 mt-5">
           <SectionLabel>Sırala</SectionLabel>
         </div>
-        <div className="grid grid-cols-3 gap-1.5">
-          {SORT_OPTIONS.map((option) => (
-            <Pill
-              key={option.value}
-              active={sortMode === option.value}
-              onClick={() => onSortChange(option.value)}
-            >
-              {sortMode === option.value && <Check size={12} />}
-              {option.label}
-            </Pill>
-          ))}
-        </div>
+        <Segmented
+          label="Sırala"
+          value={sortMode}
+          options={SORT_OPTIONS}
+          onChange={onSortChange}
+        />
 
         <div className="mb-2 mt-5 flex items-center justify-between">
           <SectionLabel>Gelişmiş</SectionLabel>
           {activeCount > 0 && (
-            <span className="mb-2 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium tabular-nums text-accent">
+            <span className="mb-2 rounded-full bg-black/[0.06] px-2 py-0.5 text-[10px] font-medium tabular-nums text-text">
               {activeCount}
             </span>
           )}
@@ -404,36 +387,15 @@ export function FilterPanel({
               </p>
             )}
           </div>
-          <fieldset>
-            <legend className="mb-1 text-[11px] text-muted">Medya</legend>
-            <div className="flex gap-1.5">
-              {[
-                ['all', 'Tümü'],
-                ['with-media', 'Görselli'],
-                ['text-only', 'Görselsiz'],
-              ].map(([value, label]) => (
-                <label
-                  key={value}
-                  className={cn(
-                    'flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-[11.5px] backdrop-blur-xl transition-[background-color,border-color,color] duration-[var(--dur-fast)]',
-                    (filters.media ?? 'all') === value
-                      ? 'border-transparent bg-accent text-white shadow-[0_2px_6px_rgba(232,116,12,0.28)]'
-                      : 'border-[color:var(--lg-border)] bg-[var(--lg-control-surface)] text-text hover:bg-[var(--lg-control-surface-hover)]'
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name={`${id}-media`}
-                    value={value}
-                    checked={(filters.media ?? 'all') === value}
-                    onChange={() => onChange('media', value)}
-                    className="sr-only"
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
+          <div>
+            <p className="mb-1 text-[11px] text-muted">Medya</p>
+            <Segmented
+              label="Medya"
+              value={filters.media ?? 'all'}
+              options={MEDIA_OPTIONS}
+              onChange={(value) => onChange('media', value)}
+            />
+          </div>
           <label className="block text-[11px] text-muted">
             Minimum beğeni
             <Input
@@ -449,28 +411,21 @@ export function FilterPanel({
           </label>
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-2 border-t border-line/80 pt-2">
+        <div className="mt-4 flex items-center justify-between gap-2 border-t border-black/[0.06] pt-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={onLoadOlder}
             disabled={loadingOlder}
+            className="-ml-2 text-[12.5px] font-medium"
           >
-            <History size={13} />
+            <History size={14} />
             {loadingOlder ? 'Yükleniyor…' : 'Daha eski kayıtlar'}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={!hasFilters}
-            onClick={onReset}
-          >
-            Filtreleri temizle
-          </Button>
+          <p className="text-[11px] tabular-nums text-muted">
+            X bookmark’larından
+          </p>
         </div>
-        <p className="mt-1 px-2 text-[10.5px] tabular-nums text-muted">
-          {resultCount} görsel · X bookmark’larından
-        </p>
       </div>
     </>
   );

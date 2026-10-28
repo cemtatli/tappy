@@ -40,7 +40,7 @@ export function AddToCollectionMenu({
               variant="ghost"
               size="sm"
               onClick={() => onToggle(c.id, !checked)}
-              className="w-full justify-start rounded-lg px-2 py-1.5 text-left text-sm [&_.lg-button__label]:w-full"
+              className="w-full justify-start rounded-lg px-2 py-1.5 text-left text-sm"
             >
               <span className="flex h-4 w-4 items-center justify-center">
                 {checked && <Check size={14} />}

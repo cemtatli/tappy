@@ -2,12 +2,12 @@
 
 @theme {
   --color-base: #ffffff;
-  --color-surface: #f4f1ea;
-  --color-surface-2: #f7f5f0;
-  --color-line: #e7e2d8;
-  --color-accent: #e8740c;
-  --color-text: #1c1b18;
-  --color-muted: #78736a;
+  --color-surface: #f2f2f4;
+  --color-surface-2: #f5f5f7;
+  --color-line: #e3e3e8;
+  --color-accent: #2c2c2e;
+  --color-text: #1d1d1f;
+  --color-muted: #6e6e73;
   --color-danger: #ff3b30;
   --color-success: #34c759;
   --radius: 0.75rem;
@@ -22,55 +22,117 @@
   --dur-slow: 300ms;
 }
 
-/* Tappy's orange on Glassy UI's prominent / accent tokens. */
-html[data-lg-theme='light'] {
-  --lg-accent: #e8740c;
-  --lg-prominent-fill: #e8740c;
-  --lg-prominent-glow: 255 196 140;
-  --lg-prominent-shade: 92 38 4;
-  --lg-prominent-tint: grayscale(1) contrast(0.4) brightness(0.9) sepia(1)
-    hue-rotate(-15deg) saturate(7);
-  --lg-switch-on: #e8740c;
-  --lg-focus-ring: #e8740c;
-}
-
-/* Compact Tappy sizing. These live below Tailwind utilities so callers can
-   keep overriding padding, height and radius with classes. */
 @layer components {
-  .lg-input.lg-input--compact {
-    padding: 0.5rem 0.9rem;
-    font-size: 13.5px;
-    border-radius: 14px;
+  /* Frosted chrome: a milky fill over a blurred backdrop, a bright top edge
+     catching the light, a hairline outline and one soft drop shadow. Pure
+     CSS, so it costs a compositing pass rather than an SVG filter per frame. */
+  .glass {
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.82) 0%,
+      rgb(250 250 252 / 0.66) 100%
+    );
+    -webkit-backdrop-filter: blur(22px) saturate(1.7);
+    backdrop-filter: blur(22px) saturate(1.7);
+    border: 1px solid rgb(255 255 255 / 0.9);
+    box-shadow:
+      0 0 0 0.5px rgb(0 0 0 / 0.07),
+      inset 0 1px 0 rgb(255 255 255 / 1),
+      inset 0 -1px 1px rgb(0 0 0 / 0.025),
+      0 1px 2px rgb(0 0 0 / 0.04),
+      0 12px 32px -14px rgb(0 0 0 / 0.22);
   }
 
-  /* Destructive keeps the prominent glass treatment, recoloured red. */
-  .lg-button--destructive {
-    --lg-prominent-fill: #ff3b30;
-    --lg-prominent-glow: 255 168 160;
-    --lg-prominent-shade: 92 10 8;
-    --lg-prominent-tint: grayscale(1) contrast(0.45) brightness(0.4) sepia(1)
-      hue-rotate(-8deg) saturate(6) brightness(1.1);
+  /* The raised white piece that sits on a glass track: segmented thumbs and
+     pressed toggle buttons. */
+  .glass-thumb {
+    background: linear-gradient(180deg, #ffffff 0%, #fbfbfc 100%);
+    box-shadow:
+      0 0 0 0.5px rgb(0 0 0 / 0.06),
+      inset 0 1px 0 rgb(255 255 255 / 1),
+      0 1px 2px rgb(0 0 0 / 0.08),
+      0 6px 14px -6px rgb(0 0 0 / 0.2);
   }
 
-  /* A press settles the glass in place instead of only changing its shadow. */
-  .lg-button.tappy-button.tappy-button {
-    transform-origin: center;
+  @media (hover: hover) and (pointer: fine) {
+    button.glass:hover:not(:disabled) {
+      background: linear-gradient(
+        180deg,
+        rgb(255 255 255 / 0.95) 0%,
+        rgb(252 252 253 / 0.82) 100%
+      );
+    }
+  }
+
+  button.glass[aria-pressed='true'] {
+    background: linear-gradient(180deg, #ffffff 0%, #fbfbfc 100%);
+    color: var(--color-text);
+    box-shadow:
+      0 0 0 0.5px rgb(0 0 0 / 0.08),
+      inset 0 1px 0 rgb(255 255 255 / 1),
+      inset 0 0 0 1px rgb(29 29 31 / 0.18),
+      0 1px 2px rgb(0 0 0 / 0.08),
+      0 8px 18px -8px rgb(0 0 0 / 0.24);
+  }
+
+  /* Primary is graphite, with the same top light so it reads as one family
+     with the glass controls. Orange stays in the logo only. */
+  .button-primary {
+    background: linear-gradient(180deg, #48484a 0%, #2c2c2e 100%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.22),
+      inset 0 -1px 1px rgb(0 0 0 / 0.25),
+      0 1px 2px rgb(0 0 0 / 0.2),
+      0 10px 24px -12px rgb(0 0 0 / 0.55);
+  }
+
+  .button-danger {
+    background: linear-gradient(180deg, #ff5a50 0%, #ff3b30 100%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.3),
+      0 1px 2px rgb(120 10 0 / 0.18),
+      0 10px 24px -12px rgb(255 59 48 / 0.55);
+  }
+
+  .button-md {
+    height: 2.25rem;
+    padding-inline: 1rem;
+    font-size: 0.875rem;
+  }
+
+  .button-sm {
+    height: 2rem;
+    padding-inline: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  /* Tactile press: a quick settle down, a springy release back. */
+  .press {
     transition:
-      --lg-button-rise var(--lg-button-rise-time) var(--lg-ease-out),
-      --lg-button-light-angle var(--lg-button-light-time, 200ms)
-        var(--lg-button-light-ease, var(--lg-ease-out)),
-      scale 160ms var(--ease-out);
+      scale 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      background-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-base) var(--ease-out),
+      opacity var(--dur-fast) var(--ease-out);
   }
 
-  .lg-button.tappy-button[data-pressed='true']:not(
-      :disabled,
-      [aria-disabled='true']
-    ) {
-    scale: 0.965;
+  .press:focus {
+    outline: none;
+  }
+
+  .press:focus-visible {
+    outline: 2px solid rgb(29 29 31 / 0.28);
+    outline-offset: 2px;
+  }
+
+  .press:active:not(:disabled) {
+    scale: 0.95;
+    transition-duration: 90ms;
+    transition-timing-function: var(--ease-out);
   }
 
   /* Tappy focus is one soft halo, not three stacked orange outlines. */
-  .lg-input.lg-tappy-input {
+  .tappy-input {
     caret-color: var(--color-accent);
     transition:
       background-color var(--dur-base) var(--ease-out),
@@ -78,30 +140,26 @@ html[data-lg-theme='light'] {
       box-shadow var(--dur-base) var(--ease-out);
   }
 
-  .lg-input.lg-tappy-input:focus,
-  .lg-input.lg-tappy-input:focus-visible {
-    border-color: rgb(232 116 12 / 0.32);
+  .tappy-input:focus,
+  .tappy-input:focus-visible {
+    border-color: rgb(29 29 31 / 0.18);
     outline: none;
     box-shadow:
-      0 0 0 2px var(--color-accent),
-      0 0 0 5px rgb(232 116 12 / 0.12),
-      inset 0 1px 2px rgb(40 30 18 / 0.05);
+      0 0 0 4px rgb(29 29 31 / 0.07),
+      0 1px 2px rgb(0 0 0 / 0.04);
   }
 
-  .lg-input.lg-tappy-input[aria-invalid='true'] {
+  .tappy-input[aria-invalid='true'] {
     border-color: rgb(255 59 48 / 0.65);
-    box-shadow:
-      0 0 0 3px rgb(255 59 48 / 0.12),
-      inset 0 1px 2px rgb(40 30 18 / 0.05);
+    box-shadow: 0 0 0 3px rgb(255 59 48 / 0.12);
   }
 
-  .lg-input.lg-tappy-input[aria-invalid='true']:focus,
-  .lg-input.lg-tappy-input[aria-invalid='true']:focus-visible {
+  .tappy-input[aria-invalid='true']:focus,
+  .tappy-input[aria-invalid='true']:focus-visible {
     border-color: rgb(255 59 48 / 0.4);
     box-shadow:
       0 0 0 2px var(--color-danger),
-      0 0 0 5px rgb(255 59 48 / 0.14),
-      inset 0 1px 2px rgb(40 30 18 / 0.05);
+      0 0 0 5px rgb(255 59 48 / 0.14);
   }
 }
 
@@ -128,41 +186,152 @@ body {
   background-color: var(--color-surface-2);
   background-image: radial-gradient(
     circle at 1px 1px,
-    rgb(28 27 24 / 0.035) 1px,
+    rgb(0 0 0 / 0.035) 1px,
     transparent 0
   );
   background-size: 26px 26px;
 }
 
+/* Floating chrome arrives in a short stagger on first paint. */
+@keyframes chrome-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--chrome-from, 10px)) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The filter panel drops from under the header. */
+@keyframes panel-drop-in {
+  from {
+    transform: translateX(-50%) translateY(-10px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes panel-drop-out {
+  from {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-50%) translateY(-6px) scale(0.98);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes panel-drop-in {
+    from {
+      transform: translateX(-50%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(-50%);
+      opacity: 1;
+    }
+  }
+}
+
+/* Header tray: the buttons slide out from the toggle, one after another. */
+@keyframes tray-item-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.header-tray > * {
+  animation: tray-item-in 380ms var(--ease-out) both;
+}
+
+.header-tray > :nth-last-child(1) {
+  animation-delay: 0ms;
+}
+.header-tray > :nth-last-child(2) {
+  animation-delay: 40ms;
+}
+.header-tray > :nth-last-child(3) {
+  animation-delay: 80ms;
+}
+.header-tray > :nth-last-child(4) {
+  animation-delay: 120ms;
+}
+
+.chrome-in {
+  animation: chrome-in 520ms var(--ease-out) both;
+  animation-delay: var(--chrome-delay, 0ms);
+}
+
+/* Cards entering the mounted window settle in rather than popping. */
+@keyframes canvas-card-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
 .canvas-card {
+  animation: canvas-card-in 380ms var(--ease-out) both;
   transition:
     transform var(--dur-base) var(--ease-out),
     box-shadow var(--dur-base) var(--ease-out),
     border-color var(--dur-base) var(--ease-out);
   box-shadow:
-    0 1px 1px rgb(28 27 24 / 0.04),
-    0 10px 24px -16px rgb(28 27 24 / 0.3);
+    0 1px 1px rgb(0 0 0 / 0.04),
+    0 10px 24px -16px rgb(0 0 0 / 0.3);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .canvas-card:hover {
     transform: translateY(-3px);
     box-shadow:
-      0 2px 3px rgb(28 27 24 / 0.05),
-      0 22px 46px -22px rgb(28 27 24 / 0.45);
+      0 2px 3px rgb(0 0 0 / 0.05),
+      0 22px 46px -22px rgb(0 0 0 / 0.45);
   }
 }
 
 .canvas-card--focus {
-  border-color: rgb(232 116 12 / 0.55);
+  border-color: rgb(29 29 31 / 0.55);
   box-shadow:
-    0 0 0 3px rgb(232 116 12 / 0.2),
-    0 22px 52px -20px rgb(28 27 24 / 0.45);
+    0 0 0 3px rgb(29 29 31 / 0.2),
+    0 22px 52px -20px rgb(0 0 0 / 0.45);
 }
 
 .canvas-card:focus-visible {
-  outline: 2px solid rgb(232 116 12 / 0.65);
+  outline: 2px solid rgb(29 29 31 / 0.65);
   outline-offset: 3px;
+}
+
+/* Far zoom and active motion: drop the per-card effects that cost paint
+   time across hundreds of cards. */
+.canvas-world[data-compact='true'] .canvas-card {
+  animation: none;
+  transition: none;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.05);
+}
+
+.canvas-world[data-moving='true'] {
+  pointer-events: none;
+}
+
+.canvas-world[data-moving='true'] .canvas-card {
+  transition: none;
 }
 
 /* Disclosure bodies grow into place. @starting-style supplies the collapsed
@@ -189,6 +358,33 @@ body {
   overflow: hidden;
 }
 
+/* Lightbox image: a thin bright rim and a deep soft shadow lift it off the
+   frosted backdrop; switching frames crossfades instead of cutting. */
+@keyframes lightbox-image-in {
+  from {
+    opacity: 0;
+    scale: 0.985;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+.lightbox-image {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.7),
+    0 2px 6px rgb(0 0 0 / 0.06),
+    0 30px 70px -28px rgb(0 0 0 / 0.38);
+  animation: lightbox-image-in var(--dur-slow) var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox-image {
+    animation-name: fade-in;
+  }
+}
+
 /* The lightbox autofocuses its close button; keep that quiet, but give
    keyboard users the app accent instead of the browser's blue ring. */
 .lightbox-actions :is(button, a):focus {
@@ -196,7 +392,7 @@ body {
 }
 
 .lightbox-actions :is(button, a):focus-visible {
-  outline: 2px solid rgb(232 116 12 / 0.7);
+  outline: 2px solid rgb(29 29 31 / 0.7);
   outline-offset: 1px;
 }
 
@@ -377,6 +573,19 @@ body {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .chrome-in,
+  .header-tray > *,
+  .canvas-card {
+    animation-name: fade-in;
+    animation-duration: var(--dur-base);
+  }
+
+  .press:active:not(:disabled) {
+    scale: 1;
+  }
+}
+
 /* Reduced motion means fewer and gentler, not none: entrances keep their fade
    and lose their travel, and no transition is allowed to move anything. */
 @media (prefers-reduced-motion: reduce) {
@@ -495,14 +704,6 @@ body {
   .tile-lift:hover {
     transform: none;
   }
-
-  .lg-button.tappy-button[data-pressed='true'] {
-    scale: 1 !important;
-  }
-}
-
-html[data-lg-reduce-motion='1'] .lg-button.tappy-button[data-pressed='true'] {
-  scale: 1 !important;
 }
 
 /* Reduced transparency: make the toast material solid for readability. */

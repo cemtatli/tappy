@@ -3,6 +3,7 @@ import {
   createTileIndex,
   layoutMasonry,
   layoutScatter,
+  visibleCopies,
   visibleTiles,
   visibleTilesFromIndex,
 } from '../src/page/lib/canvasLayout.js';
@@ -96,6 +97,64 @@ describe('layoutScatter', () => {
     expect(layout.minY).toBeLessThan(0);
     expect(layout.maxX).toBeGreaterThan(0);
     expect(layout.maxY).toBeGreaterThan(0);
+  });
+
+  it('keeps a large world roughly square', () => {
+    const images = Array.from({ length: 2000 }, (_, index) => ({
+      imageKey: `image-${index}`,
+      text: `Bookmark ${index}`,
+      authorName: `user${index}`,
+    }));
+    const layout = layoutScatter(images);
+    const aspect = layout.worldWidth / layout.worldHeight;
+    expect(aspect).toBeGreaterThan(0.6);
+    expect(aspect).toBeLessThan(1.6);
+  });
+});
+
+describe('visibleCopies', () => {
+  const layout = {
+    minX: 0,
+    minY: 0,
+    periodX: 1000,
+    periodY: 1000,
+  };
+  const tiles = [{ imageKey: 'a', x: 100, y: 100, w: 100, h: 100 }];
+  const index = createTileIndex(tiles, 512);
+
+  it('returns the original copy inside the world', () => {
+    const copies = visibleCopies(
+      index,
+      { x: 0, y: 0, width: 500, height: 500 },
+      layout
+    );
+    expect(copies).toEqual([{ key: '0:0', dx: 0, dy: 0, tiles }]);
+  });
+
+  it('finds content past every edge of the world', () => {
+    const left = visibleCopies(
+      index,
+      { x: -950, y: 0, width: 500, height: 500 },
+      layout
+    );
+    expect(left.map((copy) => copy.key)).toEqual(['-1:0']);
+    expect(left[0].tiles[0]).toBe(tiles[0]);
+
+    const farUp = visibleCopies(
+      index,
+      { x: 5000, y: -7000, width: 500, height: 500 },
+      layout
+    );
+    expect(farUp.map((copy) => [copy.dx, copy.dy])).toEqual([[5000, -7000]]);
+  });
+
+  it('returns one copy per period across a wide viewport', () => {
+    const copies = visibleCopies(
+      index,
+      { x: 0, y: 0, width: 2500, height: 500 },
+      layout
+    );
+    expect(copies.map((copy) => copy.key)).toEqual(['0:0', '1:0', '2:0']);
   });
 });
 

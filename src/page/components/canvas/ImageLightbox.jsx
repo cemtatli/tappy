@@ -16,7 +16,14 @@ import {
 } from '../../lib/media.js';
 import { Button } from '../ui/Button.jsx';
 
-const actionButton = 'size-8 min-w-8 px-0';
+const actionButton = 'size-9 min-w-9 px-0 text-text/80 hover:text-text';
+const ICON = 17;
+
+function Divider() {
+  return (
+    <span aria-hidden="true" className="mx-auto h-px w-5 bg-black/[0.08]" />
+  );
+}
 
 // Must match the lightbox-out keyframe duration (--dur-base) in app.css.
 const EXIT_MS = 200;
@@ -118,7 +125,7 @@ export function ImageLightbox({
       aria-modal="true"
       aria-label="Resim önizleme"
       data-closing={closing ? 'true' : undefined}
-      className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-[var(--dur-base)] ease-[var(--ease-out)] ${
+      className={`fixed inset-0 z-50 bg-surface-2/70 backdrop-blur-2xl backdrop-saturate-150 transition-opacity duration-[var(--dur-base)] ease-[var(--ease-out)] ${
         closing
           ? 'opacity-0'
           : 'animate-[fade-in_var(--dur-base)_var(--ease-out)] opacity-100'
@@ -139,25 +146,27 @@ export function ImageLightbox({
           <div className="flex items-center justify-center gap-4">
             {/* Main image */}
             <img
+              key={active.imageKey}
               src={active.url}
               alt=""
               style={{ maxWidth: `calc((100vw - ${reservedRight}px) * 0.72)` }}
-              className="max-h-[78vh] rounded-[var(--radius)] object-contain shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+              className="lightbox-image max-h-[78vh] rounded-[20px] object-contain"
             />
 
             {/* Right vertical action bar — sibling of the image, not overlapping */}
-            <div className="lightbox-actions flex flex-col gap-2 rounded-full border border-line bg-white/70 p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl">
+            <div className="lightbox-actions glass flex flex-col gap-1 rounded-full p-1.5">
               <Button
-                variant={isFavorited ? 'default' : 'ghost'}
+                variant="ghost"
                 size="sm"
                 aria-label="Favori"
+                aria-pressed={isFavorited}
                 title="Favori"
                 onClick={() => onToggleFavorite?.(active)}
-                className={actionButton}
+                className={`${actionButton} ${isFavorited ? 'glass-thumb text-[#ff2d55] hover:text-[#ff2d55]' : ''}`}
               >
                 <Heart
-                  size={16}
-                  className={isFavorited ? 'fill-current' : ''}
+                  size={ICON}
+                  className={`transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isFavorited ? 'scale-110 fill-current' : ''}`}
                 />
               </Button>
 
@@ -169,8 +178,10 @@ export function ImageLightbox({
                 onClick={() => onAddToCollection?.(active)}
                 className={actionButton}
               >
-                <FolderPlus size={16} />
+                <FolderPlus size={ICON} />
               </Button>
+
+              <Divider />
 
               <Button
                 variant="ghost"
@@ -180,7 +191,7 @@ export function ImageLightbox({
                 onClick={() => copyImageToClipboard(active.url)}
                 className={actionButton}
               >
-                <Copy size={16} />
+                <Copy size={ICON} />
               </Button>
 
               <Button
@@ -196,18 +207,7 @@ export function ImageLightbox({
                 }
                 className={actionButton}
               >
-                <Download size={16} />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Unmark"
-                title="Unmark"
-                onClick={() => onUnmark?.(active.tweetId)}
-                className={`${actionButton} text-danger`}
-              >
-                <Trash2 size={16} />
+                <Download size={ICON} />
               </Button>
 
               <Button
@@ -218,7 +218,7 @@ export function ImageLightbox({
                 onClick={() => onPreview?.(active)}
                 className={actionButton}
               >
-                <PanelRight size={16} />
+                <PanelRight size={ICON} />
               </Button>
 
               <Button
@@ -234,8 +234,21 @@ export function ImageLightbox({
                   aria-label="Tweet'i aç"
                   title="Tweet'i aç"
                 >
-                  <ExternalLink size={16} />
+                  <ExternalLink size={ICON} />
                 </a>
+              </Button>
+
+              <Divider />
+
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Unmark"
+                title="Unmark"
+                onClick={() => onUnmark?.(active.tweetId)}
+                className={`${actionButton} text-danger hover:bg-danger/10 hover:text-danger`}
+              >
+                <Trash2 size={ICON} />
               </Button>
 
               <Button
@@ -247,7 +260,7 @@ export function ImageLightbox({
                 onClick={startClose}
                 className={actionButton}
               >
-                <X size={16} />
+                <X size={ICON} />
               </Button>
             </div>
           </div>
@@ -256,7 +269,7 @@ export function ImageLightbox({
           {images.length > 1 && (
             <div
               style={{ maxWidth: `calc((100vw - ${reservedRight}px) * 0.74)` }}
-              className="flex gap-2 overflow-x-auto"
+              className="glass flex gap-1.5 overflow-x-auto rounded-[18px] p-1.5"
             >
               {images.map((img, i) => (
                 <button
@@ -264,8 +277,11 @@ export function ImageLightbox({
                   type="button"
                   aria-label={`Görsel ${i + 1}`}
                   onClick={() => setActiveIndex(i)}
-                  className={`h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-line ${
-                    i === activeIndex ? 'ring-2 ring-accent' : ''
+                  aria-current={i === activeIndex ? 'true' : undefined}
+                  className={`press h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl ${
+                    i === activeIndex
+                      ? 'opacity-100 shadow-[0_0_0_2px_#fff,0_0_0_3.5px_rgb(29_29_31/0.55)]'
+                      : 'opacity-55 hover:opacity-90'
                   }`}
                 >
                   <img

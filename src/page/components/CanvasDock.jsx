@@ -32,7 +32,10 @@ export function CanvasDock({
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-30 flex justify-center px-4">
-      <div className="pointer-events-auto flex w-full max-w-[680px] items-center justify-center gap-2">
+      <div
+        className="chrome-in pointer-events-auto flex w-full max-w-[680px] items-center justify-center gap-2"
+        style={{ '--chrome-delay': '80ms' }}
+      >
         <div className="relative min-w-0 flex-1">
           <Search
             size={16}
@@ -58,17 +61,18 @@ export function CanvasDock({
               <X size={13} />
             </Button>
           ) : (
-            <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-line bg-white/70 px-1.5 py-0.5 text-[10px] font-medium text-muted sm:block">
+            <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-black/[0.07] bg-black/[0.035] px-1.5 py-0.5 text-[10px] font-medium text-muted sm:block">
               ⌘K
             </kbd>
           )}
         </div>
 
         <Button
-          variant={filterOpen ? 'default' : 'outline'}
+          variant="outline"
           size="sm"
           aria-label="Filtreler"
           aria-expanded={filterOpen}
+          aria-pressed={filterOpen}
           aria-controls="filters-panel"
           title="Filtreler"
           onClick={() => setFilterOpen((open) => !open)}
@@ -92,10 +96,9 @@ export function CanvasDock({
             onSurprise();
           }}
           disabled={surpriseDisabled}
-          className="h-12 gap-2 px-4 sm:px-5"
+          className="size-12 min-w-12 px-0"
         >
-          <Sparkles size={15} />
-          <span className="hidden sm:inline">Şaşırt beni</span>
+          <Sparkles size={18} />
         </Button>
       </div>
 

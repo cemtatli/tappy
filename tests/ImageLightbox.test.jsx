@@ -112,12 +112,14 @@ describe('ImageLightbox', () => {
     expect(thumb2).toBeTruthy();
 
     // Main image starts as image1.
-    const mainImg = document.querySelector('[role="dialog"] img:not(.h-full)');
-    expect(mainImg.src).toContain('a.jpg');
+    // The main image remounts per frame so it can crossfade; re-query it.
+    const mainImg = () =>
+      document.querySelector('[role="dialog"] img.lightbox-image');
+    expect(mainImg().src).toContain('a.jpg');
 
     // Click second thumbnail — main image should switch to image2.
     fireEvent.click(thumb2);
-    expect(mainImg.src).toContain('b.jpg');
+    expect(mainImg().src).toContain('b.jpg');
   });
 
   it('reopens fully visible after a previous close', () => {

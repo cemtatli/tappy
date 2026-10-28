@@ -2,13 +2,12 @@ import { forwardRef } from 'react';
 import { cn } from '../../lib/cn.js';
 
 const VARIANTS = {
-  default: 'lg-input--compact',
-  subtle: 'lg-input--compact',
+  default: 'glass h-9 rounded-full px-4 text-sm',
+  // Recessed sidebar field: filled, borderless until focused.
+  subtle:
+    'h-8 rounded-lg border-transparent bg-black/[0.04] px-2.5 text-[13px] tracking-[0.01em]',
 };
 
-// Glassy UI's input material, without its label/hint wrapper: every Tappy
-// field already supplies its own label or aria-label, and a wrapper div inside
-// those labels would break native label association and flex layouts.
 export const Input = forwardRef(function Input(
   { variant = 'default', className, ...props },
   ref
@@ -17,7 +16,7 @@ export const Input = forwardRef(function Input(
     <input
       ref={ref}
       className={cn(
-        'lg-input lg-tappy-input',
+        'tappy-input w-full min-w-0 border text-text placeholder:text-muted',
         VARIANTS[variant] ?? VARIANTS.default,
         className
       )}

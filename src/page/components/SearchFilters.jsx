@@ -32,7 +32,7 @@ export function SearchFilters({
         aria-expanded={open}
         aria-controls={`${id}-panel`}
         onClick={() => setOpen((value) => !value)}
-        className="min-h-10 w-full justify-start gap-2 rounded-lg px-2.5 text-[13px] font-normal text-muted [&_.lg-button__label]:w-full"
+        className="min-h-10 w-full justify-start gap-2 rounded-lg px-2.5 text-[13px] font-normal text-muted"
       >
         <SlidersHorizontal size={15} />
         <span className="flex-1 text-left">Gelişmiş arama</span>
