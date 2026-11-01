@@ -23,8 +23,15 @@ Image-first, local-only, warm minimal UI. React 19 · Tailwind 4 · Base UI · V
   twice in a row), then animates pan and zoom to centre it with a temporary orange
   focus ring.
 - **Selection mode** — checkboxes appear on every card; selected cards get a ring.
-- **Keyboard** — `⌘K` / `Ctrl+K` or `/` focuses search; `S` surprises; `Esc` closes
-  the filter panel or lightbox.
+- **Keyboard** — `⌘K` / `Ctrl+K` or `/` focuses search; `S` surprises; `G` / `C` switch
+  between grid and canvas; `Esc` closes the filter panel or lightbox.
+
+## Grid
+
+- **Chronological list** — a virtualized grid that follows the current sort, newest
+  bookmark first by default, with each card showing the date it was bookmarked.
+- The header button switches between grid and canvas; the choice is remembered.
+- **Daha eski kayıtlar** at the end of the list fetches the next page on request.
 
 ## Cards
 
@@ -49,35 +56,38 @@ Image-first, local-only, warm minimal UI. React 19 · Tailwind 4 · Base UI · V
 - **Bottom dock** keeps search, filters, and surprise within reach while the canvas
   fills the screen.
 - **Search** across text, author name, and `@handle`; `⌘K` / `Ctrl+K` or `/` jumps to it.
-- **Filter button** opens a popover panel (`Esc`, the close button, or the backdrop
-  dismisses it). An orange badge shows active filters.
-- **Sources** — `Tümü`, `Görseller`, `Favoriler`, or any collection, with counts.
+- **Filter button** opens a popover panel (`Esc` or the backdrop dismisses it). An orange badge shows active filters.
+- **Sources** — `Tümü`, `Favoriler`, or any collection, with counts.
 - **Collections** — create, rename, recolor (8-color palette), and delete directly
   from the panel.
 - **Sort** — `Yeni` (newest), `Eski` (oldest), or `Beğeni` (most liked).
 - **Advanced filters** — author / `@handle`, inclusive local publication-date range,
-  media presence (`Tümü` / `Görselli` / `Görselsiz`), and minimum likes.
-- **Reset** — `Temizle` / `Filtreleri temizle` clears search and advanced filters.
+  and minimum likes, folded under `Daha fazla filtre`.
+- **Reset** — `Temizle`, shown only while a filter is active, clears search and advanced filters.
 - **Daha eski kayıtlar** — fetch the next older page from X without leaving the canvas.
 - Searches and filters apply to locally loaded records.
 
 ## Image lightbox
 
 - Large image, grows from the clicked tile, dim + blur backdrop, animated open/close.
+- **Tweet panel** — the X embed opens beside the image, with the bookmark date and an
+  Open on X link in its header.
 - **Right action bar** (with tooltips): Favorite · Add to collection · Copy · Download ·
-  Unmark · Preview (tweet panel) · Open on X · Close.
+  Toggle tweet panel · Unmark · Close.
+- Opens on the cached thumbnail at final size, then swaps to the full image when ready.
 - **Related-images strip** at the bottom for multi-image tweets; click a thumbnail to switch.
 - **Arrow-key navigation** (← / →) between the tweet's images; `Esc`, backdrop, or the
   close button dismisses.
 - Accessible: `role="dialog"`, `aria-modal`, labelled dialog, focus on open and restore
   on close, themed keyboard focus ring.
-- Copy / download / lightbox always use full-resolution images.
+- Copy and download always use the full image.
 
 ## Collections
 
 - **Named collections** — create, rename, delete.
 - **Per-collection color** — 8-color palette, shown as a dot in the filter panel.
-- **Add to collection** — from the lightbox, or in bulk from selection mode.
+- **Add to collection** — from the lightbox, or in bulk from selection mode. A new
+  collection can be created right in the menu and receives the images at once.
 - **Favoriler** — a pinned, non-deletable favorites collection; one-tap favorite from
   the lightbox.
 
@@ -87,8 +97,8 @@ Image-first, local-only, warm minimal UI. React 19 · Tailwind 4 · Base UI · V
 - **Koleksiyona ekle** — add every selected image to one or more collections.
 - **Figma'ya aktar** — bundle selected images into a single dependency-free ZIP.
 - **JSON export / CSV export** — export the distinct parent tweets of the selection.
-- **Unmark** — remove the selected bookmarks from X after confirmation.
-- **Vazgeç** — clear the selection.
+- **Unmark** — remove the selected bookmarks, with the same undo window as a single one.
+- **Vazgeç** — clear the selection and leave selection mode.
 
 ## Bookmarks & data
 
@@ -96,7 +106,11 @@ Image-first, local-only, warm minimal UI. React 19 · Tailwind 4 · Base UI · V
   cookies (`ct0` / `auth_token`) — no third-party server, all local.
 - **IndexedDB** storage with incremental sync: fetch the newest page on open, then page
   backwards through older records.
-- **Unmark** (remove bookmark) — single, from the lightbox, or in bulk.
+- **Unmark** (remove bookmark) — single, from the lightbox, or in bulk. There is no
+  confirmation: the bookmark disappears at once, and X is only called after a 5-second
+  **Geri al** (undo) window. Closing the tab inside that window keeps the bookmark.
+- **Bookmark date** — decoded from X's `sortIndex`, so records cached earlier have it
+  too. Included in JSON and CSV exports as `bookmarkedAt`.
 
 ## Export & media
 

@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Search, SlidersHorizontal, Sparkles, X } from 'lucide-react';
-import { FilterPanel } from './FilterPanel.jsx';
 import { Button } from './ui/Button.jsx';
 import { Input } from './ui/Input.jsx';
+
+// The panel's collection menu pulls in Base UI; keep it out of the first load.
+export const loadFilterPanel = () => import('./FilterPanel.jsx');
+const FilterPanel = lazy(() =>
+  loadFilterPanel().then((module) => ({ default: module.FilterPanel }))
+);
 
 export function CanvasDock({
   search,
@@ -12,7 +17,6 @@ export function CanvasDock({
   onFilterChange,
   onResetFilters,
   activeFilterCount,
-  resultCount,
   source,
   onSourceChange,
   collections,
@@ -29,6 +33,7 @@ export function CanvasDock({
   loadingOlder,
 }) {
   const [filterOpen, setFilterOpen] = useState(false);
+  const [filterMounted, setFilterMounted] = useState(false);
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-30 flex justify-center px-4">
@@ -75,7 +80,10 @@ export function CanvasDock({
           aria-pressed={filterOpen}
           aria-controls="filters-panel"
           title="Filtreler"
-          onClick={() => setFilterOpen((open) => !open)}
+          onClick={() => {
+            setFilterMounted(true);
+            setFilterOpen((open) => !open);
+          }}
           className="relative size-12 min-w-12 px-0"
         >
           <SlidersHorizontal size={17} />
@@ -102,26 +110,29 @@ export function CanvasDock({
         </Button>
       </div>
 
-      <FilterPanel
-        open={filterOpen}
-        onClose={() => setFilterOpen(false)}
-        filters={filters}
-        onChange={onFilterChange}
-        onReset={onResetFilters}
-        resultCount={resultCount}
-        source={source}
-        onSourceChange={onSourceChange}
-        collections={collections}
-        counts={counts}
-        onCreateCollection={onCreateCollection}
-        onRenameCollection={onRenameCollection}
-        onDeleteCollection={onDeleteCollection}
-        onSetCollectionColor={onSetCollectionColor}
-        sortMode={sortMode}
-        onSortChange={onSortChange}
-        onLoadOlder={onLoadOlder}
-        loadingOlder={loadingOlder}
-      />
+      {filterMounted && (
+        <Suspense fallback={null}>
+          <FilterPanel
+            open={filterOpen}
+            onClose={() => setFilterOpen(false)}
+            filters={filters}
+            onChange={onFilterChange}
+            onReset={onResetFilters}
+            source={source}
+            onSourceChange={onSourceChange}
+            collections={collections}
+            counts={counts}
+            onCreateCollection={onCreateCollection}
+            onRenameCollection={onRenameCollection}
+            onDeleteCollection={onDeleteCollection}
+            onSetCollectionColor={onSetCollectionColor}
+            sortMode={sortMode}
+            onSortChange={onSortChange}
+            onLoadOlder={onLoadOlder}
+            loadingOlder={loadingOlder}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -1,4 +1,12 @@
+import { Download, Frame, FolderPlus, Trash2, X } from 'lucide-react';
 import { Button } from './ui/Button.jsx';
+
+const ACTION = 'h-9 gap-1.5 px-3 text-[13px] font-medium';
+const ICON = 15;
+
+function Separator() {
+  return <span aria-hidden="true" className="mx-1 h-5 w-px bg-black/[0.08]" />;
+}
 
 export function SelectionBar({
   visible,
@@ -14,38 +22,91 @@ export function SelectionBar({
   if (!visible) return null;
   return (
     <div
+      role="toolbar"
+      aria-label="Toplu işlemler"
       style={{ transform: 'translateX(-50%)' }}
-      className="fixed bottom-24 left-1/2 z-40 flex max-w-[calc(100vw-32px)] flex-wrap items-center justify-center gap-2 rounded-full border border-line/80 bg-white/80 px-4 py-2 text-text shadow-[0_1px_2px_rgba(0,0,0,0.04),0_14px_40px_-20px_rgba(0,0,0,0.4)] backdrop-blur-xl animate-[bar-center-in_var(--dur-base)_var(--ease-out)]"
+      className="glass fixed bottom-5 left-1/2 z-40 flex h-12 max-w-[calc(100vw-32px)] items-center gap-0.5 overflow-x-auto rounded-full px-1.5 text-text animate-[bar-center-in_var(--dur-base)_var(--ease-out)]"
     >
-      <span className="text-sm">{statusText ?? `${count} seçili`}</span>
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label="Vazgeç"
+        title="Vazgeç"
+        onClick={onClear}
+        className="size-9 min-w-9 px-0"
+      >
+        <X size={ICON} />
+      </Button>
+      <span
+        role="status"
+        className="whitespace-nowrap pl-1 pr-2 text-[13px] font-semibold tabular-nums"
+      >
+        {statusText ?? `${count} seçili`}
+      </span>
+      <Separator />
       {onBulkAddToCollection && (
-        <Button variant="ghost" size="sm" onClick={onBulkAddToCollection}>
-          Koleksiyona ekle
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label="Koleksiyona ekle"
+          onClick={onBulkAddToCollection}
+          className={ACTION}
+        >
+          <FolderPlus size={ICON} />
+          Koleksiyon
         </Button>
       )}
       {onBulkFigmaExport && (
-        <Button variant="ghost" size="sm" onClick={onBulkFigmaExport}>
-          Figma&apos;ya aktar
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label="Figma'ya aktar"
+          onClick={onBulkFigmaExport}
+          className={ACTION}
+        >
+          <Frame size={ICON} />
+          Figma
         </Button>
       )}
       {onBulkExportJson && (
-        <Button variant="ghost" size="sm" onClick={onBulkExportJson}>
-          JSON export
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label="JSON export"
+          onClick={onBulkExportJson}
+          className={ACTION}
+        >
+          <Download size={ICON} />
+          JSON
         </Button>
       )}
       {onBulkExportCsv && (
-        <Button variant="ghost" size="sm" onClick={onBulkExportCsv}>
-          CSV export
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label="CSV export"
+          onClick={onBulkExportCsv}
+          className={ACTION}
+        >
+          <Download size={ICON} />
+          CSV
         </Button>
       )}
       {onBulkUnmark && (
-        <Button variant="destructive" size="sm" onClick={onBulkUnmark}>
-          Unmark
-        </Button>
+        <>
+          <Separator />
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Unmark"
+            title="Bookmark'tan kaldır"
+            onClick={onBulkUnmark}
+            className="size-9 min-w-9 px-0 text-danger hover:bg-danger/10"
+          >
+            <Trash2 size={ICON} />
+          </Button>
+        </>
       )}
-      <Button variant="ghost" size="sm" onClick={onClear}>
-        Vazgeç
-      </Button>
     </div>
   );
 }

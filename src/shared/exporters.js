@@ -1,3 +1,5 @@
+import { bookmarkedAt } from './tweetModel.js';
+
 function csvEscape(value) {
   let str = String(value ?? '');
   // Formül başlangıç karakterleri (=, +, -, @, tab, CR) Excel/LibreOffice'te
@@ -9,8 +11,13 @@ function csvEscape(value) {
   return str;
 }
 
+function withBookmarkedAt(tweet) {
+  const savedAt = bookmarkedAt(tweet);
+  return savedAt ? { ...tweet, bookmarkedAt: savedAt } : tweet;
+}
+
 export function toJson(tweets) {
-  return JSON.stringify(tweets, null, 2);
+  return JSON.stringify(tweets.map(withBookmarkedAt), null, 2);
 }
 
 const CSV_COLUMNS = [
@@ -19,13 +26,14 @@ const CSV_COLUMNS = [
   'authorName',
   'text',
   'createdAt',
+  'bookmarkedAt',
   'mediaUrls',
   'tweetUrl',
 ];
 
 export function toCsv(tweets) {
   const header = CSV_COLUMNS.join(',');
-  const rows = tweets.map((t) =>
+  const rows = tweets.map(withBookmarkedAt).map((t) =>
     CSV_COLUMNS.map((col) => {
       const value = col === 'mediaUrls' ? t.mediaUrls.join(';') : t[col];
       return csvEscape(value);

@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { parseBookmarksResponse } from '../src/shared/tweetModel.js';
+import {
+  bookmarkedAt,
+  parseBookmarksResponse,
+} from '../src/shared/tweetModel.js';
 
 function makeFixture() {
   return {
@@ -347,5 +350,31 @@ describe('avatarUrl and stats fields', () => {
       retweets: 0,
       replies: 0,
     });
+  });
+});
+
+describe('bookmarkedAt', () => {
+  const createdAt = '2026-10-31T00:00:00.000Z';
+
+  it('decodes the bookmark time from the bits above the low 20', () => {
+    const ms = Date.UTC(2026, 10, 1, 11, 16, 19, 362);
+    const sortIndex = String((BigInt(ms) << 20n) | 763737n);
+    expect(bookmarkedAt({ sortIndex, createdAt })).toBe(
+      '2026-11-01T11:16:19.362Z'
+    );
+  });
+
+  it('is unknown when the value lands before the tweet existed', () => {
+    expect(bookmarkedAt({ sortIndex: '2000', createdAt })).toBeNull();
+  });
+
+  it('is unknown when the value lands in the future', () => {
+    const sortIndex = String(BigInt(Date.now() + 1e10) << 20n);
+    expect(bookmarkedAt({ sortIndex, createdAt })).toBeNull();
+  });
+
+  it('is unknown for a malformed or missing sortIndex', () => {
+    expect(bookmarkedAt({ sortIndex: 'abc', createdAt })).toBeNull();
+    expect(bookmarkedAt({ createdAt })).toBeNull();
   });
 });

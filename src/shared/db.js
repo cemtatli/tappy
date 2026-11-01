@@ -1,4 +1,5 @@
 import Dexie from 'dexie';
+import { bySortIndexDesc } from './sort.js';
 
 export const FAVORITES_ID = '__favorites__';
 const DB_NAME = 'x-bookmarker';
@@ -26,13 +27,6 @@ export async function openDb() {
   defineSchema(db);
   await db.open();
   return db;
-}
-
-// sortIndex is X's numeric cursor as a string; lengths differ, so compare as
-// BigInt instead of relying on the index's string order.
-function bySortIndexDesc(a, b) {
-  const diff = BigInt(b.sortIndex) - BigInt(a.sortIndex);
-  return diff > 0n ? 1 : diff < 0n ? -1 : 0;
 }
 
 function byOrderThenCreated(a, b) {

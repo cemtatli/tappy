@@ -1,10 +1,10 @@
 const KEY = 'x-bookmarker:prefs';
 
-const DEFAULTS = { sortMode: 'date-desc', viewMode: 'grid', source: 'all' };
+const DEFAULTS = { sortMode: 'date-desc', view: 'canvas', source: 'all' };
 
 const VALID = {
   sortMode: ['date-desc', 'date-asc', 'likes-desc'],
-  viewMode: ['grid', 'canvas'],
+  view: ['canvas', 'grid'],
 };
 
 export function loadPrefs() {

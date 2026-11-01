@@ -270,7 +270,7 @@ body {
 }
 
 .chrome-in {
-  animation: chrome-in 520ms var(--ease-out) both;
+  animation: chrome-in var(--dur-slow) var(--ease-out) both;
   animation-delay: var(--chrome-delay, 0ms);
 }
 
@@ -287,7 +287,7 @@ body {
 }
 
 .canvas-card {
-  animation: canvas-card-in 380ms var(--ease-out) both;
+  animation: canvas-card-in var(--dur-base) var(--ease-out) both;
   transition:
     transform var(--dur-base) var(--ease-out),
     box-shadow var(--dur-base) var(--ease-out),
@@ -320,6 +320,11 @@ body {
 
 /* Far zoom and active motion: drop the per-card effects that cost paint
    time across hundreds of cards. */
+/* Rows mount continuously while scrolling; an entrance on each would shimmer. */
+.image-grid .canvas-card {
+  animation: none;
+}
+
 .canvas-world[data-compact='true'] .canvas-card {
   animation: none;
   transition: none;
@@ -371,7 +376,7 @@ body {
   }
 }
 
-.lightbox-image {
+.lightbox-frame {
   box-shadow:
     0 0 0 1px rgb(255 255 255 / 0.7),
     0 2px 6px rgb(0 0 0 / 0.06),
@@ -379,8 +384,12 @@ body {
   animation: lightbox-image-in var(--dur-slow) var(--ease-out) both;
 }
 
+.lightbox-image--swapped {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .lightbox-image {
+  .lightbox-frame:not(.lightbox-image--swapped) {
     animation-name: fade-in;
   }
 }

@@ -27,3 +27,64 @@ describe('AddToCollectionMenu', () => {
     expect(onToggle).toHaveBeenCalledWith('c1', false);
   });
 });
+
+describe('AddToCollectionMenu creating', () => {
+  it('can create the first collection when none exist', () => {
+    const onCreate = vi.fn();
+    render(
+      <AddToCollectionMenu
+        open
+        collections={[]}
+        memberOf={new Set()}
+        onToggle={vi.fn()}
+        onCreate={onCreate}
+        onClose={vi.fn()}
+      />
+    );
+    const input = screen.getByLabelText('Yeni koleksiyon adı');
+    expect(document.activeElement).toBe(input);
+    fireEvent.change(input, { target: { value: '  Icons ' } });
+    fireEvent.submit(input.closest('form'));
+    expect(onCreate).toHaveBeenCalledWith('Icons');
+    expect(input.value).toBe('');
+  });
+
+  it('ignores a blank name', () => {
+    const onCreate = vi.fn();
+    render(
+      <AddToCollectionMenu
+        open
+        collections={[]}
+        memberOf={new Set()}
+        onToggle={vi.fn()}
+        onCreate={onCreate}
+        onClose={vi.fn()}
+      />
+    );
+    const input = screen.getByLabelText('Yeni koleksiyon adı');
+    fireEvent.change(input, { target: { value: '   ' } });
+    fireEvent.submit(input.closest('form'));
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it('closes on Escape without reaching window listeners', () => {
+    const onClose = vi.fn();
+    const onWindowKey = vi.fn();
+    window.addEventListener('keydown', onWindowKey);
+    render(
+      <AddToCollectionMenu
+        open
+        collections={[]}
+        memberOf={new Set()}
+        onToggle={vi.fn()}
+        onClose={onClose}
+      />
+    );
+    fireEvent.keyDown(screen.getByLabelText('Yeni koleksiyon adı'), {
+      key: 'Escape',
+    });
+    window.removeEventListener('keydown', onWindowKey);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onWindowKey).not.toHaveBeenCalled();
+  });
+});

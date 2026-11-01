@@ -21,12 +21,28 @@ describe('toJson', () => {
   });
 });
 
+describe('bookmarkedAt in exports', () => {
+  const saved = {
+    ...sample[0],
+    createdAt: '2026-10-31T00:00:00.000Z',
+    sortIndex: '1880654379077052249',
+  };
+
+  it('adds the decoded time to JSON', () => {
+    expect(JSON.parse(toJson([saved]))[0].bookmarkedAt).toMatch(/^2026-11-01T/);
+  });
+
+  it('adds the decoded time to CSV', () => {
+    expect(toCsv([saved]).split('\n')[1]).toContain('2026-11-01T');
+  });
+});
+
 describe('toCsv', () => {
   it('writes header row with expected columns', () => {
     const csv = toCsv(sample);
     const [header] = csv.split('\n');
     expect(header).toBe(
-      'id,authorHandle,authorName,text,createdAt,mediaUrls,tweetUrl'
+      'id,authorHandle,authorName,text,createdAt,bookmarkedAt,mediaUrls,tweetUrl'
     );
   });
 

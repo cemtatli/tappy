@@ -55,6 +55,7 @@ describe('flattenImages', () => {
       text: '',
       likeCount: 0,
       createdAt: null,
+      bookmarkedAt: null,
       tweetUrl: 'https://x.com/alice/status/100',
     });
   });

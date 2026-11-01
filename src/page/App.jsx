@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -42,25 +44,33 @@ import {
   PreviewPanel,
   PREVIEW_PANEL_WIDTH,
 } from './components/PreviewPanel.jsx';
-import { SettingsPanel } from './components/SettingsPanel.jsx';
 import { ImageCanvas } from './components/canvas/ImageCanvas.jsx';
+import { ImageGrid } from './components/canvas/ImageGrid.jsx';
 import { ImageLightbox } from './components/canvas/ImageLightbox.jsx';
 import { CanvasToolbar } from './components/CanvasToolbar.jsx';
 import { CanvasHeader } from './components/CanvasHeader.jsx';
-import { CanvasDock } from './components/CanvasDock.jsx';
+import { CanvasDock, loadFilterPanel } from './components/CanvasDock.jsx';
 import { AddToCollectionMenu } from './components/AddToCollectionMenu.jsx';
 import { exportToFigma } from './lib/figmaExport.js';
 import { buildZip } from './lib/zip.js';
 import { clampZoom } from './lib/canvasZoom.js';
+import { nextViewFromKey } from './lib/shortcuts.js';
 import { DEFAULT_COLLECTION_COLOR } from './lib/collectionColors.js';
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogClose,
-} from './components/ui/AlertDialog.jsx';
 import { Button } from './components/ui/Button.jsx';
+
+const loadSettingsPanel = () => import('./components/SettingsPanel.jsx');
+const SettingsPanel = lazy(() =>
+  loadSettingsPanel().then((module) => ({ default: module.SettingsPanel }))
+);
+
+// Fetched once the app is idle, so the first click on these never waits.
+function preloadOptionalChunks() {
+  loadSettingsPanel();
+  loadFilterPanel();
+  import('./components/ui/Checkbox.jsx');
+}
+
+const UNMARK_UNDO_MS = 5000;
 
 function downloadFile(filename, content, mimeType) {
   const blob = new Blob([content], { type: mimeType });
@@ -80,14 +90,14 @@ export function App() {
   const dbRef = useRef(null);
   const isLoadingOlderRef = useRef(false);
   const toastIdRef = useRef(0);
-  // Unmark sırasında X'ten yeni sayfa gelirse aynı tweet geri yazılır (zombi).
-  // Bekleyen id'leri sync/refresh yollarından dışla.
+  // A sync page arriving during an unmark would write the same tweet back, so
+  // pending ids are kept out of the sync and refresh paths.
   const pendingUnmarkRef = useRef(new Set());
   const searchInputRef = useRef(null);
   const focusNonceRef = useRef(0);
   const lastSurpriseKeyRef = useRef(null);
-  const [unmarkConfirm, setUnmarkConfirm] = useState(null);
 
+  const [dbReady, setDbReady] = useState(false);
   const [allTweets, setAllTweets] = useState([]);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -96,12 +106,17 @@ export function App() {
   const [bulkProgress, setBulkProgress] = useState(null);
   const [prefs] = useState(loadPrefs);
   const [sortMode, setSortMode] = useState(prefs.sortMode);
+  const [view, setView] = useState(prefs.view);
   const [previewId, setPreviewId] = useState(null);
-  const [source, setSource] = useState(prefs.source);
+  // 'images' was a source of its own, but every view only ever shows images.
+  const [source, setSource] = useState(
+    prefs.source === 'images' ? 'all' : prefs.source
+  );
   const [collections, setCollections] = useState([]);
   const [zoom, setZoom] = useState(1);
   const [addTarget, setAddTarget] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsMounted, setSettingsMounted] = useState(false);
   const [lightbox, setLightbox] = useState(null);
   const [focusRequest, setFocusRequest] = useState(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -120,9 +135,6 @@ export function App() {
       );
       return allTweets.filter((t) => tweetIds.has(t.id));
     }
-    if (source === 'images') {
-      return allTweets.filter((t) => (t.mediaUrls?.length ?? 0) > 0);
-    }
     return allTweets;
   }, [allTweets, source, collections]);
 
@@ -138,15 +150,22 @@ export function App() {
     if (typeof source === 'object') {
       const c = collections.find((x) => x.id === source.collectionId);
       if (!c) return [];
+      if (view === 'grid') {
+        const keys = new Set(c.imageKeys);
+        return flattenImages(filteredTweets).filter((image) =>
+          keys.has(image.imageKey)
+        );
+      }
       const byId = new Map(filteredTweets.map((t) => [t.id, t]));
       return imagesForCollection(c, byId);
     }
+    const images = flattenImages(filteredTweets);
+    // The grid is a chronological list, so a post's frames stay together.
+    if (view === 'grid') return images;
     // Show one frame per post first, then the carousel extras: a wall of
     // distinct posts reads better than the same caption twice in a row.
-    return flattenImages(filteredTweets)
-      .slice()
-      .sort((a, b) => a.mediaIndex - b.mediaIndex);
-  }, [source, collections, filteredTweets]);
+    return images.sort((a, b) => a.mediaIndex - b.mediaIndex);
+  }, [source, collections, filteredTweets, view]);
 
   const advancedFilterCount = useMemo(
     () =>
@@ -167,7 +186,6 @@ export function App() {
         'Koleksiyon'
       );
     }
-    if (source === 'images') return 'Görseller';
     return 'Tümü';
   }, [source, collections]);
 
@@ -184,16 +202,21 @@ export function App() {
     savePrefs({ source });
   }, [source]);
 
+  useEffect(() => {
+    savePrefs({ view });
+  }, [view]);
+
   const dismissToast = useCallback((id) => {
     setToasts((current) => removeToast(current, id));
   }, []);
 
   const pushToast = useCallback(
-    (type, message) => {
+    (type, message, { action, duration = 4000 } = {}) => {
       toastIdRef.current += 1;
       const id = toastIdRef.current;
-      setToasts((current) => addToast(current, { id, type, message }));
-      setTimeout(() => dismissToast(id), 4000);
+      setToasts((current) => addToast(current, { id, type, message, action }));
+      setTimeout(() => dismissToast(id), duration);
+      return id;
     },
     [dismissToast]
   );
@@ -248,6 +271,11 @@ export function App() {
         searchInputRef.current?.select?.();
         return;
       }
+      const nextView = nextViewFromKey(e.key, { typing, hasModifier });
+      if (nextView) {
+        setView(nextView);
+        return;
+      }
       if (typing || hasModifier) return;
       if (e.key === '/') {
         e.preventDefault();
@@ -295,19 +323,14 @@ export function App() {
   );
 
   const counts = useMemo(() => {
-    const images = allTweets.filter(
-      (t) => (t.mediaUrls?.length ?? 0) > 0
-    ).length;
     const byCollection = new Map(
       userCollections.map((c) => [c.id, c.imageKeys.length])
     );
     return {
-      all: allTweets.length,
-      images,
       byCollection,
       favorites: favoritesCollection?.imageKeys.length ?? 0,
     };
-  }, [allTweets, userCollections, favoritesCollection]);
+  }, [userCollections, favoritesCollection]);
 
   const addMemberOf = useMemo(() => {
     if (!addTarget) return new Set();
@@ -321,8 +344,9 @@ export function App() {
 
   async function handleCreateCollection(name, color) {
     const order = collections.length;
+    const id = crypto.randomUUID();
     await putCollection(dbRef.current, {
-      id: crypto.randomUUID(),
+      id,
       name,
       order,
       createdAt: new Date().toISOString(),
@@ -330,6 +354,15 @@ export function App() {
       color: color ?? DEFAULT_COLLECTION_COLOR,
     });
     await refreshCollections();
+    return id;
+  }
+
+  async function handleCreateCollectionWithTarget(name) {
+    const id = await handleCreateCollection(name);
+    if (addTarget) {
+      await addImagesToCollection(dbRef.current, id, addTarget);
+      await refreshCollections();
+    }
   }
 
   async function handleSetCollectionColor(id, color) {
@@ -428,13 +461,20 @@ export function App() {
         if (cancelled) return;
         dbRef.current = db;
         await ensureFavoritesCollection(db);
-        const cached = await getAllTweets(db);
+        // Read together and commit in one render: applying them one by one lays
+        // the canvas out twice and shows a collection source as empty at first.
+        const [cached, storedCollections] = await Promise.all([
+          getAllTweets(db),
+          listCollections(db),
+        ]);
         if (cancelled) return;
         setAllTweets(cached);
-        await refreshCollections();
+        setCollections(storedCollections);
+        setDbReady(true);
         syncNewest(cached[0]);
       } catch (error) {
         if (!cancelled) {
+          setDbReady(true);
           showStatus(`Yerel veritabanı açılamadı: ${error.message}`);
         }
       }
@@ -444,6 +484,14 @@ export function App() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!dbReady) return undefined;
+    const schedule = window.requestIdleCallback ?? setTimeout;
+    const cancel = window.cancelIdleCallback ?? clearTimeout;
+    const handle = schedule(preloadOptionalChunks);
+    return () => cancel(handle);
+  }, [dbReady]);
 
   function handleFilterChange(key, value) {
     setFilters((current) => ({ ...current, [key]: value }));
@@ -499,6 +547,12 @@ export function App() {
 
   const handleOpenLightbox = useCallback((image, originRect) => {
     setLightbox({ image, originRect });
+    setPreviewId(image.tweetId);
+  }, []);
+
+  const handleCloseLightbox = useCallback(() => {
+    setLightbox(null);
+    setPreviewId(null);
   }, []);
 
   function handleBulkAddToCollection() {
@@ -525,41 +579,58 @@ export function App() {
   }
 
   function handleBulkUnmark() {
-    const ids = selectedTweets.map((t) => t.id);
-    if (ids.length === 0) return;
-    setUnmarkConfirm({ ids });
+    scheduleUnmark(selectedTweets.map((t) => t.id));
   }
 
-  // X'teki silme geri alınamaz; tek tık yerine onay iste.
-  function handleUnmarkOne(id) {
-    if (!allTweets.some((t) => t.id === id)) return;
-    setUnmarkConfirm({ ids: [id] });
-  }
-
-  // Önce X'te sil, başarılıysa yerel kaydı kaldır. Optimistic yerel silme
-  // hata durumunda kayıp, sync ile çakışınca zombi kayıt üretiyordu.
-  async function runUnmark(ids) {
-    const removedById = new Map(
-      allTweets.filter((t) => ids.includes(t.id)).map((t) => [t.id, t])
-    );
-    const targets = Array.from(removedById.keys());
-    if (targets.length === 0) return;
-    const bulk = targets.length > 1;
+  // Removal from X cannot be reversed, so it waits out the undo window. Until
+  // then the tweet is only hidden: the database keeps it, and closing the tab
+  // inside the window simply leaves the bookmark in place.
+  function scheduleUnmark(ids) {
+    const tweets = allTweets.filter((t) => ids.includes(t.id));
+    if (tweets.length === 0) return;
+    const targets = new Set(tweets.map((t) => t.id));
     for (const id of targets) pendingUnmarkRef.current.add(id);
+    setAllTweets((current) => current.filter((t) => !targets.has(t.id)));
+    setSelectedImageKeys(new Set());
+    // Cleared here too: left set, it would reopen the panel on undo.
+    setPreviewId((current) => (targets.has(current) ? null : current));
+
+    const timer = setTimeout(() => commitUnmark(tweets), UNMARK_UNDO_MS);
+    const toastId = pushToast(
+      'success',
+      tweets.length > 1
+        ? `${tweets.length} bookmark kaldırıldı`
+        : 'Bookmark kaldırıldı',
+      {
+        duration: UNMARK_UNDO_MS,
+        action: {
+          label: 'Geri al',
+          onClick: () => {
+            clearTimeout(timer);
+            dismissToast(toastId);
+            for (const id of targets) pendingUnmarkRef.current.delete(id);
+            refreshFromDb();
+          },
+        },
+      }
+    );
+  }
+
+  // Delete on X first and drop the local record only on success: removing it
+  // optimistically lost the record on failure and left zombies during a sync.
+  async function commitUnmark(tweets) {
+    const bulk = tweets.length > 1;
     try {
-      setAllTweets((current) => current.filter((t) => !removedById.has(t.id)));
-      setSelectedImageKeys(new Set());
       const failed = [];
       let lastError = null;
-      for (let i = 0; i < targets.length; i += 1) {
+      for (let i = 0; i < tweets.length; i += 1) {
         if (bulk)
-          setBulkProgress(`${i + 1}/${targets.length} unmark ediliyor...`);
-        const id = targets[i];
-        const result = await requestDeleteBookmark(id);
+          setBulkProgress(`${i + 1}/${tweets.length} unmark ediliyor...`);
+        const result = await requestDeleteBookmark(tweets[i].id);
         if (result.ok) {
-          await deleteTweetById(dbRef.current, id);
+          await deleteTweetById(dbRef.current, tweets[i].id);
         } else {
-          failed.push(removedById.get(id));
+          failed.push(tweets[i]);
           lastError = result.error;
         }
       }
@@ -574,15 +645,8 @@ export function App() {
             : `Unmark başarısız, geri alındı: ${lastError?.message ?? ''}`
         );
       }
-      const ok = targets.length - failed.length;
-      if (ok > 0) {
-        pushToast(
-          'success',
-          bulk ? `${ok} bookmark kaldırıldı` : 'Bookmark kaldırıldı'
-        );
-      }
     } finally {
-      for (const id of targets) pendingUnmarkRef.current.delete(id);
+      for (const { id } of tweets) pendingUnmarkRef.current.delete(id);
       if (bulk) setBulkProgress(null);
     }
   }
@@ -607,7 +671,8 @@ export function App() {
     if (images.length === 0) return;
     try {
       const r = await exportToFigma(images, { buildZip, downloadBlob });
-      showStatus(
+      pushToast(
+        'success',
         r.path === 'zip'
           ? `${r.count} görsel ZIP olarak indi — Figma'ya sürükle.`
           : `${r.count} görsel Figma'ya aktarıldı.`
@@ -646,6 +711,8 @@ export function App() {
     return allTweets.filter((t) => ids.has(t.id));
   }, [selectedImageKeys, allTweets]);
 
+  const selectionActive = selectionMode && selectedImageKeys.size > 0;
+
   const hasActiveFilters =
     advancedFilterCount > 0 ||
     Boolean(filters.search?.trim()) ||
@@ -659,17 +726,31 @@ export function App() {
 
   return (
     <div className="relative h-screen overflow-hidden bg-surface-2">
-      <ImageCanvas
-        images={canvasImages}
-        zoom={zoom}
-        onZoomChange={(next) => setZoom(clampZoom(next))}
-        selectionMode={selectionMode}
-        selectedIds={selectedImageKeys}
-        onToggleSelect={handleToggleImageSelect}
-        onOpenLightbox={handleOpenLightbox}
-        focusRequest={focusRequest}
-        viewKey={viewKey}
-      />
+      {view === 'grid' ? (
+        <ImageGrid
+          images={canvasImages}
+          selectionMode={selectionMode}
+          selectedIds={selectedImageKeys}
+          onToggleSelect={handleToggleImageSelect}
+          onOpenLightbox={handleOpenLightbox}
+          focusRequest={focusRequest}
+          viewKey={viewKey}
+          onLoadOlder={loadOlderPage}
+          loadingOlder={loadingOlder}
+        />
+      ) : (
+        <ImageCanvas
+          images={canvasImages}
+          zoom={zoom}
+          onZoomChange={(next) => setZoom(clampZoom(next))}
+          selectionMode={selectionMode}
+          selectedIds={selectedImageKeys}
+          onToggleSelect={handleToggleImageSelect}
+          onOpenLightbox={handleOpenLightbox}
+          focusRequest={focusRequest}
+          viewKey={viewKey}
+        />
+      )}
 
       <div className="pointer-events-none fixed inset-x-0 top-0 z-20 h-24 bg-gradient-to-b from-surface-2/90 via-surface-2/50 to-transparent" />
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 h-32 bg-gradient-to-t from-surface-2 via-surface-2/80 to-transparent" />
@@ -680,15 +761,20 @@ export function App() {
         selectionMode={selectionMode}
         onToggleSelectionMode={handleToggleSelectionMode}
         onExportAll={handleExportAll}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => {
+          setSettingsMounted(true);
+          setSettingsOpen(true);
+        }}
         onHome={handleRecenter}
+        view={view}
+        onViewChange={setView}
       />
 
-      {canvasImages.length === 0 && (
+      {dbReady && canvasImages.length === 0 && (
         <div className="pointer-events-none fixed inset-0 z-10 flex items-center justify-center p-6">
           <div className="max-w-sm text-center">
             <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted">
-              Sonsuz tuval
+              {view === 'grid' ? 'Izgara' : 'Sonsuz tuval'}
             </p>
             <h1 className="font-serif text-[34px] italic leading-[1.1] tracking-[-0.02em] text-text">
               Küçük bir keşif alanı.
@@ -713,36 +799,40 @@ export function App() {
         </div>
       )}
 
-      <CanvasDock
-        search={filters.search}
-        onSearchChange={(value) => handleFilterChange('search', value)}
-        searchInputRef={searchInputRef}
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onResetFilters={() => setFilters({ ...EMPTY_FILTERS })}
-        activeFilterCount={filterBadge}
-        resultCount={canvasImages.length}
-        source={source}
-        onSourceChange={setSource}
-        collections={userCollections}
-        counts={counts}
-        onCreateCollection={handleCreateCollection}
-        onRenameCollection={handleRenameCollection}
-        onDeleteCollection={handleDeleteCollection}
-        onSetCollectionColor={handleSetCollectionColor}
-        sortMode={sortMode}
-        onSortChange={setSortMode}
-        onSurprise={handleSurprise}
-        surpriseDisabled={canvasImages.length === 0}
-        onLoadOlder={loadOlderPage}
-        loadingOlder={loadingOlder}
-      />
+      {/* The selection bar takes the dock's place while there is a selection. */}
+      {!selectionActive && (
+        <CanvasDock
+          search={filters.search}
+          onSearchChange={(value) => handleFilterChange('search', value)}
+          searchInputRef={searchInputRef}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          onResetFilters={() => setFilters({ ...EMPTY_FILTERS })}
+          activeFilterCount={filterBadge}
+          source={source}
+          onSourceChange={setSource}
+          collections={userCollections}
+          counts={counts}
+          onCreateCollection={handleCreateCollection}
+          onRenameCollection={handleRenameCollection}
+          onDeleteCollection={handleDeleteCollection}
+          onSetCollectionColor={handleSetCollectionColor}
+          sortMode={sortMode}
+          onSortChange={setSortMode}
+          onSurprise={handleSurprise}
+          surpriseDisabled={canvasImages.length === 0}
+          onLoadOlder={loadOlderPage}
+          loadingOlder={loadingOlder}
+        />
+      )}
 
-      <CanvasToolbar
-        zoom={zoom}
-        onZoomChange={(next) => setZoom(clampZoom(next))}
-        onRecenter={handleRecenter}
-      />
+      {view === 'canvas' && (
+        <CanvasToolbar
+          zoom={zoom}
+          onZoomChange={(next) => setZoom(clampZoom(next))}
+          onRecenter={handleRecenter}
+        />
+      )}
 
       <PreviewPanel
         tweet={previewTweet}
@@ -753,7 +843,7 @@ export function App() {
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
       <SelectionBar
-        visible={selectionMode && selectedImageKeys.size > 0}
+        visible={selectionActive}
         count={selectedImageKeys.size}
         statusText={bulkProgress}
         onBulkAddToCollection={handleBulkAddToCollection}
@@ -761,7 +851,7 @@ export function App() {
         onBulkExportJson={handleBulkExportJson}
         onBulkExportCsv={handleBulkExportCsv}
         onBulkUnmark={handleBulkUnmark}
-        onClear={() => setSelectedImageKeys(new Set())}
+        onClear={handleToggleSelectionMode}
       />
 
       <AddToCollectionMenu
@@ -769,44 +859,18 @@ export function App() {
         collections={userCollections}
         memberOf={addMemberOf}
         onToggle={handleToggleMembership}
+        onCreate={handleCreateCollectionWithTarget}
         onClose={() => setAddTarget(null)}
       />
 
-      <SettingsPanel
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
-
-      <AlertDialog
-        open={Boolean(unmarkConfirm)}
-        onOpenChange={(open) => {
-          if (!open) setUnmarkConfirm(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogTitle>
-            {unmarkConfirm?.ids.length > 1
-              ? `${unmarkConfirm.ids.length} bookmark kaldırılsın mı?`
-              : 'Bookmark kaldırılsın mı?'}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            X&apos;teki bookmark listenden de silinir. Bu işlem geri alınamaz.
-          </AlertDialogDescription>
-          <div className="mt-6 flex justify-end gap-2">
-            <AlertDialogClose>Vazgeç</AlertDialogClose>
-            <AlertDialogClose
-              variant="destructive"
-              onClick={() => {
-                const ids = unmarkConfirm?.ids ?? [];
-                setUnmarkConfirm(null);
-                runUnmark(ids);
-              }}
-            >
-              Kaldır
-            </AlertDialogClose>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
+      {settingsMounted && (
+        <Suspense fallback={null}>
+          <SettingsPanel
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+          />
+        </Suspense>
+      )}
 
       <ImageLightbox
         images={lightboxImages}
@@ -817,11 +881,12 @@ export function App() {
         onAddToCollection={handleOpenAddToCollection}
         onPreview={handleImagePreview}
         onUnmark={(tweetId) => {
-          handleUnmarkOne(tweetId);
+          scheduleUnmark([tweetId]);
           setLightbox(null);
         }}
-        onClose={() => setLightbox(null)}
+        onClose={handleCloseLightbox}
         reservedRight={previewTweet ? PREVIEW_PANEL_WIDTH : 0}
+        previewOpen={Boolean(previewTweet)}
       />
     </div>
   );

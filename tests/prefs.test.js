@@ -26,7 +26,7 @@ describe('prefs', () => {
   it('returns defaults when storage is empty', () => {
     expect(loadPrefs()).toEqual({
       sortMode: 'date-desc',
-      viewMode: 'grid',
+      view: 'canvas',
       source: 'all',
     });
   });
@@ -46,13 +46,21 @@ describe('prefs', () => {
     expect(loadPrefs().sortMode).toBe('date-desc');
   });
 
-  it('viewMode default is grid', () => {
-    expect(loadPrefs().viewMode).toBe('grid');
+  it('opens on the canvas by default', () => {
+    expect(loadPrefs().view).toBe('canvas');
   });
 
-  it('saves and restores viewMode', () => {
-    savePrefs({ viewMode: 'canvas' });
-    expect(loadPrefs().viewMode).toBe('canvas');
+  it('ignores the retired viewMode value older versions stored', () => {
+    localStorage.setItem(
+      'x-bookmarker:prefs',
+      JSON.stringify({ viewMode: 'grid' })
+    );
+    expect(loadPrefs().view).toBe('canvas');
+  });
+
+  it('saves and restores view', () => {
+    savePrefs({ view: 'grid' });
+    expect(loadPrefs().view).toBe('grid');
   });
 
   it('source default is all', () => {

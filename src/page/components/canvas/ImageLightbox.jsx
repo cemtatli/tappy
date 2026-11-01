@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   X,
-  ExternalLink,
   Copy,
   Download,
   Heart,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react';
 import {
   copyImageToClipboard,
+  displayUrl,
   downloadImage,
   extFromUrl,
 } from '../../lib/media.js';
@@ -28,6 +28,76 @@ function Divider() {
 // Must match the lightbox-out keyframe duration (--dur-base) in app.css.
 const EXIT_MS = 200;
 
+// pbs.twimg.com fits images into a long side per variant. The bare URL serves
+// the same file as `medium`, about three times the bytes of `small`.
+const SMALL_LONG_SIDE = 680;
+const FULL_LONG_SIDE = 1200;
+
+function estimatedFullWidth(width, height) {
+  return Math.max(width, height) >= SMALL_LONG_SIDE
+    ? (width * FULL_LONG_SIDE) / SMALL_LONG_SIDE
+    : width;
+}
+
+// The canvas tile has already cached the `small` variant, so it can paint in
+// the first frame. It is stretched to the size the full image will have, which
+// keeps the layout still when the sharp version takes over.
+function LightboxImage({ url, maxWidth }) {
+  const previewUrl = displayUrl(url);
+  const hasPreview = previewUrl !== url;
+  const [previewSize, setPreviewSize] = useState(null);
+  const [fullLoaded, setFullLoaded] = useState(false);
+
+  const showPreview = hasPreview && !fullLoaded;
+
+  return (
+    <>
+      {showPreview && (
+        <img
+          src={previewUrl}
+          alt=""
+          data-testid="lightbox-preview"
+          onLoad={(e) => {
+            setPreviewSize({
+              width: e.currentTarget.naturalWidth,
+              height: e.currentTarget.naturalHeight,
+            });
+          }}
+          style={
+            previewSize
+              ? {
+                  aspectRatio: `${previewSize.width} / ${previewSize.height}`,
+                  width: `min(${estimatedFullWidth(previewSize.width, previewSize.height)}px, ${maxWidth}, calc(78vh * ${previewSize.width / previewSize.height}))`,
+                }
+              : undefined
+          }
+          className={
+            previewSize
+              ? 'lightbox-frame rounded-[20px] object-contain'
+              : 'absolute size-px opacity-0'
+          }
+        />
+      )}
+      {showPreview && !previewSize && (
+        <div
+          aria-hidden="true"
+          className="size-72 animate-pulse rounded-[20px] bg-black/[0.05]"
+        />
+      )}
+      <img
+        src={url}
+        alt=""
+        onLoad={() => setFullLoaded(true)}
+        style={{ maxWidth }}
+        // Swapping in over the preview must not replay the entrance animation.
+        className={`max-h-[78vh] rounded-[20px] object-contain lightbox-frame lightbox-image ${
+          showPreview ? 'hidden' : ''
+        } ${previewSize ? 'lightbox-image--swapped' : ''}`}
+      />
+    </>
+  );
+}
+
 export function ImageLightbox({
   images,
   initialKey,
@@ -39,6 +109,7 @@ export function ImageLightbox({
   onUnmark,
   onClose,
   reservedRight = 0,
+  previewOpen = false,
 }) {
   const closeRef = useRef(null);
   const previousFocusRef = useRef(null);
@@ -76,6 +147,12 @@ export function ImageLightbox({
   }, [initialKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isOpen = images && images.length > 0;
+
+  // Warm the other frames so the arrow keys land on a preview straight away.
+  useEffect(() => {
+    if (!isOpen || images.length < 2) return;
+    for (const image of images) new Image().src = displayUrl(image.url);
+  }, [isOpen, images]);
 
   useEffect(() => {
     const h = (e) => {
@@ -145,12 +222,10 @@ export function ImageLightbox({
           {/* Image + action bar side by side */}
           <div className="flex items-center justify-center gap-4">
             {/* Main image */}
-            <img
+            <LightboxImage
               key={active.imageKey}
-              src={active.url}
-              alt=""
-              style={{ maxWidth: `calc((100vw - ${reservedRight}px) * 0.72)` }}
-              className="lightbox-image max-h-[78vh] rounded-[20px] object-contain"
+              url={active.url}
+              maxWidth={`calc((100vw - ${reservedRight}px) * 0.72)`}
             />
 
             {/* Right vertical action bar — sibling of the image, not overlapping */}
@@ -214,28 +289,12 @@ export function ImageLightbox({
                 variant="ghost"
                 size="sm"
                 aria-label="Önizleme"
+                aria-pressed={previewOpen}
                 title="Önizleme"
                 onClick={() => onPreview?.(active)}
-                className={actionButton}
+                className={`${actionButton} ${previewOpen ? 'glass-thumb' : ''}`}
               >
                 <PanelRight size={ICON} />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                asChild
-                className={actionButton}
-              >
-                <a
-                  href={active.tweetUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Tweet'i aç"
-                  title="Tweet'i aç"
-                >
-                  <ExternalLink size={ICON} />
-                </a>
               </Button>
 
               <Divider />
@@ -285,7 +344,7 @@ export function ImageLightbox({
                   }`}
                 >
                   <img
-                    src={img.url}
+                    src={displayUrl(img.url, '240x240')}
                     alt=""
                     className="h-full w-full object-cover"
                   />

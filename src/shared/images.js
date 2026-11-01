@@ -1,3 +1,5 @@
+import { bookmarkedAt } from './tweetModel.js';
+
 export function imageKeyFor(tweetId, mediaIndex) {
   return `${tweetId}:${mediaIndex}`;
 }
@@ -10,7 +12,7 @@ export function parseImageKey(key) {
   };
 }
 
-function toRecord(tweet, mediaIndex) {
+function toRecord(tweet, mediaIndex, savedAt = bookmarkedAt(tweet)) {
   return {
     imageKey: imageKeyFor(tweet.id, mediaIndex),
     tweetId: tweet.id,
@@ -23,6 +25,7 @@ function toRecord(tweet, mediaIndex) {
     text: tweet.text ?? '',
     likeCount: tweet.stats?.likes ?? 0,
     createdAt: tweet.createdAt ?? null,
+    bookmarkedAt: savedAt,
     tweetUrl: tweet.tweetUrl,
   };
 }
@@ -31,8 +34,9 @@ export function flattenImages(tweets) {
   const out = [];
   for (const tweet of tweets) {
     const urls = tweet.mediaUrls ?? [];
+    const savedAt = urls.length > 0 ? bookmarkedAt(tweet) : null;
     for (let i = 0; i < urls.length; i += 1) {
-      out.push(toRecord(tweet, i));
+      out.push(toRecord(tweet, i, savedAt));
     }
   }
   return out;

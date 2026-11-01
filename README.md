@@ -15,7 +15,8 @@ A Chrome (MV3) extension for browsing, organizing, and exporting your X (Twitter
 - **Collections** — named collections (create / rename / delete), per-collection color, single and bulk add, plus a non-deletable `Favoriler`.
 - **Search & sort** — search by text / author / handle; combine author, inclusive local publication-date range, image presence, and minimum likes. Filters and sort apply to locally loaded records, and work inside collections.
 - **Export** — all or selected records as **JSON** / **CSV**; selected images as a single **ZIP** to drag into Figma; copy or download an individual image.
-- **Unmark** — remove a bookmark from the lightbox, or several at once from the selection bar.
+- **Unmark** — remove a bookmark from the lightbox, or several at once from the selection bar, with 5 seconds to undo.
+- **Grid** — a newest-first list with bookmark dates, next to the infinite canvas.
 
 ## Install
 

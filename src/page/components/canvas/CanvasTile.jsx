@@ -1,8 +1,14 @@
-import { memo, useState } from 'react';
+import { lazy, memo, Suspense, useState } from 'react';
 import { Heart } from 'lucide-react';
 import { cn } from '../../lib/cn.js';
-import { Checkbox } from '../ui/Checkbox.jsx';
+import { formatDay } from '../../lib/formatDate.js';
 import { displayUrl } from '../../lib/media.js';
+
+// Base UI is the largest optional part of the bundle and the checkbox only
+// appears in selection mode, so it stays out of the first load.
+const Checkbox = lazy(() =>
+  import('../ui/Checkbox.jsx').then((module) => ({ default: module.Checkbox }))
+);
 
 function cleanText(text) {
   return (text ?? '')
@@ -26,6 +32,7 @@ export const CanvasTile = memo(function CanvasTile({
   onToggleSelect,
   onOpenLightbox,
   compact = false,
+  showBookmarkDate = false,
 }) {
   const [loadState, setLoadState] = useState('loading');
   const isExtraFrame = (image.mediaIndex ?? 0) > 0;
@@ -125,6 +132,15 @@ export const CanvasTile = memo(function CanvasTile({
           </p>
           <div className="mt-auto flex items-center gap-1.5 pt-2 text-[10.5px] leading-none text-muted">
             <span className="truncate">@{image.authorHandle}</span>
+            {showBookmarkDate && image.bookmarkedAt && (
+              <time
+                dateTime={image.bookmarkedAt}
+                title="Bookmark tarihi"
+                className="shrink-0 tabular-nums before:mr-1.5 before:content-['·']"
+              >
+                {formatDay(image.bookmarkedAt)}
+              </time>
+            )}
             {(image.likeCount ?? 0) > 0 && (
               <span className="ml-auto inline-flex shrink-0 items-center gap-1 tabular-nums">
                 <Heart size={10} strokeWidth={2} />
@@ -142,10 +158,12 @@ export const CanvasTile = memo(function CanvasTile({
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
-            <Checkbox
-              checked={selected}
-              onCheckedChange={() => onToggleSelect?.(image.imageKey)}
-            />
+            <Suspense fallback={<span className="block size-5" />}>
+              <Checkbox
+                checked={selected}
+                onCheckedChange={() => onToggleSelect?.(image.imageKey)}
+              />
+            </Suspense>
           </span>
         </div>
       )}

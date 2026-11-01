@@ -4,6 +4,8 @@ import {
   ChevronLeft,
   Download,
   Ellipsis,
+  Infinity as InfinityIcon,
+  LayoutGrid,
   Settings,
 } from 'lucide-react';
 import tappyMark from '../../assets/icons/tappy-mark.svg';
@@ -34,6 +36,8 @@ export function CanvasHeader({
   onExportAll,
   onOpenSettings,
   onHome,
+  view,
+  onViewChange,
 }) {
   const [expanded, setExpanded] = useState(false);
   // Selection mode needs its toggle on screen to be finished.
@@ -87,6 +91,16 @@ export function CanvasHeader({
             {count} görsel · {sourceLabel}
           </span>
         )}
+        <IconButton
+          label={view === 'grid' ? 'Sonsuz tuvale geç' : 'Izgaraya geç'}
+          onClick={() => onViewChange(view === 'grid' ? 'canvas' : 'grid')}
+        >
+          {view === 'grid' ? (
+            <InfinityIcon size={17} />
+          ) : (
+            <LayoutGrid size={17} />
+          )}
+        </IconButton>
         {!selectionMode && (
           <Button
             variant="outline"

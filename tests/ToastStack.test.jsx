@@ -37,3 +37,27 @@ describe('ToastStack', () => {
     expect(onDismiss).toHaveBeenCalledWith(7);
   });
 });
+
+describe('ToastStack action', () => {
+  it('runs the action without dismissing through the toast body', () => {
+    const onClick = vi.fn();
+    const onDismiss = vi.fn();
+    render(
+      <ToastStack
+        toasts={[
+          {
+            id: 1,
+            type: 'success',
+            message: 'Bookmark kaldırıldı',
+            action: { label: 'Geri al', onClick },
+          },
+        ]}
+        onDismiss={onDismiss}
+      />
+    );
+    fireEvent.click(screen.getByText('Bookmark kaldırıldı'));
+    expect(onDismiss).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Geri al' }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+});

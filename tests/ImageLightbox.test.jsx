@@ -172,7 +172,53 @@ describe('ImageLightbox', () => {
     const stage = screen.getByTestId('lightbox-stage');
     expect(stage.style.paddingRight).toBe('420px');
 
-    const mainImg = document.querySelector('[role="dialog"] img:not(.h-full)');
+    const mainImg = document.querySelector(
+      '[role="dialog"] img.lightbox-image'
+    );
     expect(mainImg.style.maxWidth).toContain('420px');
+  });
+});
+
+describe('ImageLightbox loading', () => {
+  function renderOne() {
+    render(
+      <ImageLightbox
+        images={[image1, image2]}
+        initialKey="1:0"
+        originRect={null}
+        favoriteKeys={new Set()}
+        onClose={() => {}}
+      />
+    );
+  }
+
+  it('paints the small variant at the full image size while the full one loads', () => {
+    renderOne();
+    const preview = screen.getByTestId('lightbox-preview');
+    expect(preview.src).toContain('name=small');
+    Object.defineProperty(preview, 'naturalWidth', { value: 510 });
+    Object.defineProperty(preview, 'naturalHeight', { value: 680 });
+    fireEvent.load(preview);
+    expect(preview.style.width).toContain('900px');
+    expect(document.querySelector('img.lightbox-image').className).toContain(
+      'hidden'
+    );
+  });
+
+  it('swaps to the full image without replaying the entrance', () => {
+    renderOne();
+    const preview = screen.getByTestId('lightbox-preview');
+    fireEvent.load(preview);
+    const full = document.querySelector('img.lightbox-image');
+    fireEvent.load(full);
+    expect(screen.queryByTestId('lightbox-preview')).toBeNull();
+    expect(full.className).not.toContain('hidden');
+    expect(full.className).toContain('lightbox-image--swapped');
+  });
+
+  it('requests small thumbnails for the strip, not the full images', () => {
+    renderOne();
+    const strip = screen.getByRole('button', { name: 'Görsel 2' });
+    expect(strip.querySelector('img').src).toContain('name=240x240');
   });
 });

@@ -11,7 +11,7 @@ import { App } from '../src/page/App.jsx';
 vi.mock('../src/page/prefs.js', () => ({
   loadPrefs: () => ({
     sortMode: 'date-desc',
-    viewMode: 'canvas',
+    view: 'canvas',
     source: 'all',
   }),
   savePrefs: vi.fn(),
@@ -65,7 +65,7 @@ describe('App search', () => {
     await screen.findByText('alice-0.jpg,bob-0.jpg,alice-1.jpg');
 
     fireEvent.click(screen.getByRole('button', { name: 'Filtreler' }));
-    fireEvent.click(screen.getByText('Design'));
+    fireEvent.click(await screen.findByText('Design'));
     expect(screen.getByTestId('canvas-results').textContent).toBe(
       'alice-0.jpg,bob-0.jpg'
     );
@@ -73,6 +73,7 @@ describe('App search', () => {
     fireEvent.change(screen.getByLabelText('Ara'), {
       target: { value: 'design' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Daha fazla filtre' }));
     fireEvent.change(screen.getByLabelText('Yazar'), {
       target: { value: '@bob' },
     });

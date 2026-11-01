@@ -1,6 +1,10 @@
-function bySortIndexDesc(a, b) {
-  const diff = BigInt(b.sortIndex) - BigInt(a.sortIndex);
-  return diff > 0n ? 1 : diff < 0n ? -1 : 0;
+// sortIndex is X's numeric cursor as a decimal string, too big for a Number.
+// Without leading zeros the longer string is the larger value and equal lengths
+// compare lexically, which sorts large libraries far faster than BigInt parsing.
+export function bySortIndexDesc(a, b) {
+  const x = a.sortIndex;
+  const y = b.sortIndex;
+  return y.length - x.length || (y > x ? 1 : y < x ? -1 : 0);
 }
 
 export function sortTweets(tweets, mode = 'date-desc') {

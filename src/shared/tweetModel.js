@@ -1,3 +1,24 @@
+// The bookmark timeline's sortIndex carries the moment of bookmarking: everything
+// above its low 20 bits is Unix milliseconds. X does not document this, so a value
+// that does not land between the tweet's own date and now counts as unknown.
+// Deriving it on read also covers records cached before this was known.
+const SORT_INDEX_SEQUENCE_BITS = 20n;
+const CLOCK_SKEW_MS = 24 * 60 * 60 * 1000;
+const X_LAUNCH_MS = Date.UTC(2006, 2, 21);
+
+export function bookmarkedAt(tweet) {
+  let ms;
+  try {
+    ms = Number(BigInt(tweet.sortIndex) >> SORT_INDEX_SEQUENCE_BITS);
+  } catch {
+    return null;
+  }
+  const created = Date.parse(tweet.createdAt);
+  const earliest = Number.isFinite(created) ? created : X_LAUNCH_MS;
+  if (ms < earliest || ms > Date.now() + CLOCK_SKEW_MS) return null;
+  return new Date(ms).toISOString();
+}
+
 function parseTweetResult(result) {
   if (!result) return null;
   const tweet =

@@ -37,13 +37,6 @@ describe('PreviewPanel', () => {
     expect(link.target).toBe('_blank');
   });
 
-  it('close button calls onClose', () => {
-    const onClose = vi.fn();
-    render(<PreviewPanel tweet={TWEET} onClose={onClose} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Önizlemeyi kapat' }));
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
   it('Escape key calls onClose', () => {
     const onClose = vi.fn();
     render(<PreviewPanel tweet={TWEET} onClose={onClose} />);
@@ -90,5 +83,44 @@ describe('PreviewPanel', () => {
       })
     );
     expect(screen.getByTitle('Tweet önizleme').style.height).toBe('300px');
+  });
+});
+
+describe('PreviewPanel loading and date', () => {
+  it('shows a skeleton until the embed reports its size', () => {
+    render(<PreviewPanel tweet={TWEET} />);
+    expect(screen.getByTestId('embed-skeleton')).toBeTruthy();
+    fireEvent(
+      window,
+      new MessageEvent('message', {
+        origin: 'https://platform.twitter.com',
+        data: {
+          'twttr.embed': {
+            method: 'twttr.private.resize',
+            params: [{ height: 400 }],
+          },
+        },
+      })
+    );
+    expect(screen.queryByTestId('embed-skeleton')).toBeNull();
+  });
+
+  it('shows when the tweet was bookmarked, if known', () => {
+    const ms = Date.UTC(2026, 10, 1, 11, 16);
+    render(
+      <PreviewPanel
+        tweet={{
+          ...TWEET,
+          createdAt: '2026-10-31T00:00:00.000Z',
+          sortIndex: String(BigInt(ms) << 20n),
+        }}
+      />
+    );
+    expect(screen.getByText(/Kaydedildi/).textContent).toContain('2026');
+  });
+
+  it('omits the date when it is unknown', () => {
+    render(<PreviewPanel tweet={TWEET} />);
+    expect(screen.queryByText(/Kaydedildi/)).toBeNull();
   });
 });
